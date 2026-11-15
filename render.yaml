@@ -1,0 +1,8 @@
+services:
+  - type: web
+    name: elyndor
+    runtime: node
+    plan: free
+    buildCommand: echo "sem dependencias"
+    startCommand: node server.js
+    healthCheckPath: /health
