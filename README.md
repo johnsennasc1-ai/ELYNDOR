@@ -21,9 +21,16 @@ Observação: no plano gratuito do Render o serviço "dorme" após inatividade; 
 ## Controles
 - Mover: WASD / setas / joystick · Atacar: J ou Espaço / ⚔ · Habilidade elemental: K / ✦ (libera após o despertar) · Interagir: E · Chat: Enter
 
+## Arte e animação
+Os sprites vêm das suas artes 360° (pasta `public/assets/`): cada personagem e inimigo usa as 8 direções (frente, diagonais, lados, costas), animadas por código (andar, correr, golpe, magia, dano, queda). A arte pintada da folha de personagens aparece no menu inicial, no status/pausa (Esc ou ☰) e nos diálogos. O Sombroso aparece nas cutscenes.
+Para trocar um sprite, substitua o PNG correspondente (8 quadros lado a lado) e ajuste `MAN` em `public/sprites.js`.
+
 ## Personagens (todos animados e jogáveis)
 Kael (espada de fogo), Lyra (cura de água), Eldarion (arco de vento), Seraphine (sombra), Darius (escudo de terra), Thorin (martelo de metal).
-Cada um tem andar, corrida, golpe próprio, magia, dano e queda. Os visuais são criados por código (arquivo `public/chars.js`).
+Cada um tem andar, corrida, golpe, magia, dano e queda.
+
+## Arco I expandido
+Vila de Valdora → Noite dos Corrompidos → Campos de Valdora (4 monstros que renascem, para ganhar XP; 4 missões secundárias) → Santuário das Raízes (nível 4) → O Carrasco → escolha do cristal ou fragmento → epílogo com Auren e o Sombroso.
 
 ## Como o online funciona
 Servidor de salas via SSE (até 8 jogadores por sala): posições, animações, ataques e chat são sincronizados.
