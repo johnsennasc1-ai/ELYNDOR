@@ -61,6 +61,18 @@ const A = (() => {
     step: () => noise(.05, .08, 500),
     ui: () => tone(660, .07, 'square', .06, ac.currentTime, sfxG),
     blip: () => tone(500 + Math.random() * 90, .035, 'square', .03, ac.currentTime, sfxG),
+    sword: () => { noise(.16, .4, 3800, 0, 0, 'bandpass'); tone(1200, .09, 'triangle', .07, ac.currentTime + .03, sfxG); tone(1800, .06, 'sine', .05, ac.currentTime + .05, sfxG); },
+    swordhit: () => { noise(.1, .5, 2600); tone(900, .18, 'square', .09, ac.currentTime, sfxG); tone(1350, .25, 'sine', .07, ac.currentTime, sfxG); },
+    bowshot: () => { tone(220, .2, 'triangle', .16, ac.currentTime, sfxG); tone(110, .25, 'sine', .12, ac.currentTime, sfxG); noise(.14, .3, 6000, ac.currentTime + .05, 0, 'highpass'); },
+    arrowhit: () => { noise(.08, .5, 700); tone(160, .1, 'square', .12, ac.currentTime, sfxG); },
+    staff: () => [0, 1, 2].forEach(i => tone(660 * Math.pow(1.5, i), .5, 'sine', .11, ac.currentTime + i * .06, sfxG)),
+    wand: () => { const t0 = ac.currentTime, o = ac.createOscillator(), a2 = ac.createGain(); o.type = 'sawtooth'; o.frequency.setValueAtTime(520, t0); o.frequency.exponentialRampToValueAtTime(90, t0 + .35); a2.gain.setValueAtTime(.14, t0); a2.gain.exponentialRampToValueAtTime(.001, t0 + .4); o.connect(a2); a2.connect(sfxG); o.start(t0); o.stop(t0 + .45); noise(.3, .2, 900, 0, 0, 'bandpass'); },
+    mace: () => { noise(.22, .45, 1200, 0, 0, 'bandpass'); tone(90, .3, 'sawtooth', .22, ac.currentTime + .12, sfxG); noise(.15, .5, 500, ac.currentTime + .12); },
+    hammer: () => { noise(.3, .5, 900, 0, 0, 'bandpass'); tone(60, .5, 'sawtooth', .3, ac.currentTime + .2, sfxG); tone(300, .4, 'square', .1, ac.currentTime + .2, sfxG); noise(.5, .6, 350, ac.currentTime + .2); },
+    charge: () => { const t0 = ac.currentTime, o = ac.createOscillator(), a2 = ac.createGain(); o.type = 'triangle'; o.frequency.setValueAtTime(120, t0); o.frequency.exponentialRampToValueAtTime(900, t0 + .7); a2.gain.setValueAtTime(.02, t0); a2.gain.linearRampToValueAtTime(.2, t0 + .7); a2.gain.exponentialRampToValueAtTime(.001, t0 + .8); o.connect(a2); a2.connect(sfxG); o.start(t0); o.stop(t0 + .85); },
+    special: () => { [0, 4, 7, 12].forEach((s2, i) => tone(220 * Math.pow(2, s2 / 12), .9, 'sawtooth', .1, ac.currentTime + i * .08, sfxG)); noise(.9, .7, 500); },
+    dodge: () => noise(.2, .3, 2200, 0, 0, 'bandpass'),
+    ready: () => [0, 1].forEach(i => tone(990 * (1 + i * .5), .12, 'square', .07, ac.currentTime + i * .09, sfxG)),
     roar: () => { tone(70, 1, 'sawtooth', .3, ac.currentTime, sfxG); noise(1, .5, 500); }
   };
   return {

@@ -1,13 +1,13 @@
 'use strict';
 // ===== Elyndor — As Cinzas de Valdora: motor do jogo (ação em tempo real + salas online) =====
 const $ = s => document.querySelector(s), cv = $('#c'), g = cv.getContext('2d'), W = 960, H = 540;
-const BALANCE = { bossHP: 2600, enemyScale: .04, skillCost: 25, skillCd: 4, dungeonMinLv: 4, respawn: 28 }; // ajuste aqui no balanceamento
+const BALANCE = { bossHP: 2600, bossHPTB: 1100, enemyScale: .04, skillCost: 25, skillCd: 4, dungeonMinLv: 4, respawn: 28 }; // ajuste aqui no balanceamento
 const XPT = [0, 100, 250, 450, 700, 1000, 1400, 1900, 2500, 3200, 4000];
 const touch = matchMedia('(pointer:coarse)').matches;
-const S = { scene: 'title', hero: 'kael', name: '', room: 'valdora', id: Math.random().toString(36).slice(2, 8), xp: 0, lv: 1, gold: 0, quest: 0, talked: {}, chests: {}, skills: false, choice: '', qs: {}, sheep: [], glyph: [], ore: 0, kt: new Set(), campT: {}, doorOpen: 0 };
+const S = { scene: 'title', hero: 'kael', name: '', room: 'valdora', id: Math.random().toString(36).slice(2, 8), xp: 0, lv: 1, gold: 0, quest: 0, talked: {}, chests: {}, skills: false, choice: '', qs: {}, sheep: [], glyph: [], clues: [], ore: 0, kt: new Set(), campT: {}, doorOpen: 0 };
 let P = null, E = [], PR = [], FX = [], R = {}, cam = { x: 0, y: 0 }, shake = 0, T = 0, keys = {}, J = { x: 0, y: 0 }, held = { a: 0, s: 0 };
-let cut = null, wave = null, objective = '', netOn = false, lastSend = 0, boss = null, dlgNext = null, dlgOn = false, typing = null, started = false, paused = false, warnT = 0;
-const ART = {}; ['sombroso', ...Object.keys(CHARS).flatMap(k => ['p_' + k, 'b_' + k])].forEach(k => { const i = new Image(); i.src = 'assets/' + k + (k === 'sombroso' ? '.png' : '.jpg'); ART[k] = i; });
+let TB = null, cut = null, wave = null, objective = '', netOn = false, lastSend = 0, boss = null, dlgNext = null, dlgOn = false, typing = null, started = false, paused = false, warnT = 0;
+const ART = {}; ['sombroso', ...Object.keys(CHARS).flatMap(k => ['p_' + k, 'b_' + k, 'art_' + k])].forEach(k => { const i = new Image(); i.src = 'assets/' + k + (k === 'sombroso' || k.startsWith('art_') ? '.png' : '.jpg'); ART[k] = i; });
 const PORT = { 'Kael Varen': 'kael', 'Lyra Solen': 'lyra', 'Eldarion Thal': 'eld', 'Seraphine Voss': 'ser', 'Darius Korven': 'dar', 'Thorin Bragg': 'tho', 'Auren': 'aur', 'Estudioso viajante': 'aur' };
 const SCN = {
   village: { w: 1500, h: 900, col: [[0, 520, 700, 60], [800, 520, 1500, 60], [200, 120, 150, 100], [650, 100, 180, 110], [1100, 120, 150, 100], [200, 320, 130, 90], [745, 345, 60, 50], [0, 0, 1500, 10], [0, 0, 10, 900], [1490, 0, 10, 900], [0, 890, 1500, 10]] },
@@ -31,6 +31,11 @@ const CHESTS = [{ id: 'c1', x: 1200, y: 400, s: 'village' }, { id: 'c2', x: 300,
 const SHEEP = [{ x: 420, y: 650 }, { x: 1250, y: 450 }, { x: 900, y: 900 }];
 const GLYPHS = [{ x: 600, y: 150, t: 'Sete guardiões selaram o Devorador. Sete chaves, sete herdeiros.' }, { x: 1550, y: 500, t: 'O fogo guarda a coragem, a água guarda a memória, o vento guarda a promessa, a sombra guarda a verdade.' }, { x: 1000, y: 1000, t: 'O sétimo não dorme. O sétimo espera. O sétimo carrega o peso dos outros seis.' }];
 const CAMPS = [['wolf', 500, 760], ['wolf', 650, 880], ['wolf', 300, 420], ['bat', 1100, 600], ['bat', 1300, 800], ['bat', 700, 300], ['ogre', 1500, 420], ['ogre', 1400, 950], ['golem', 1650, 250], ['golem', 1000, 220]];
+const CLUES = [
+  { x: 1100, y: 780, t: ['Soldados do reino jazem entre carroças viradas. Cada um tem uma corrente cinzenta presa ao pulso, e todos olham para o norte, como se tivessem visto algo antes de morrer.'], r: { kael: 'Essas correntes... a forja de meu pai nunca fez nada assim. Alguém as fabricou para prender coisas vivas.', lyra: 'Não morreram de ferida. Estão... murchos, como a água do rio.', eld: 'Há pegadas de feras que não deveriam existir. Foram soltas aqui, de propósito.', ser: 'Eu conheço este selo. É o símbolo da Ordem que me prendeu. Eles estão aqui.', dar: 'Reconheço a farda. São homens do meu antigo batalhão. Ordens... de quem?', tho: 'O metal destas correntes é minério de Ferro Negro. Foi roubado das minas, e usado para isto.' } },
+  { x: 300, y: 960, t: ['Na margem do rio, peixes mortos boiam em uma água verde-escura. Um barril rachado, marcado com o símbolo cinzento, ainda escorre algo viscoso.'], r: { kael: 'O veneno vem do norte, mas começou aqui. Alguém derramou isto de propósito.', lyra: 'É a mesma substância que encontrei nas pedras do rio. Não é natural: foi feita.', eld: 'Veneno de raiz corrompida. Há algo apodrecendo a terra por dentro.', ser: 'Magia de drenagem. Quem fez isto sabe o que está drenando.', dar: 'Armazenamento militar. Isto saiu de um depósito do exército.', tho: 'O cheiro é de minério fundido misturado a magia. Uma forja ilegal por perto.' } },
+  { x: 1550, y: 560, t: ['Um acampamento abandonado às pressas: tendas rasgadas, uma mesa de mapas e, no centro, um desenho do Santuário das Raízes sob a ponte antiga, com a palavra "SELO" circulada em vermelho.'], r: { kael: 'Querem o que está debaixo da nossa ponte. E a vila inteira não sabe.', lyra: 'Se o selo se abrir, o veneno do rio será o menor dos problemas.', eld: 'O mapa mostra raízes antigas ligadas ao santuário. É um dos selos dos Guardiões.', ser: 'Eles estão escavando. Não é só pesquisa: é colheita.', dar: 'Planejamento militar. Uma operação em andamento, com ordens de cima.', tho: 'Este desenho mostra as galerias. Há minério ali, e muito, o que explica o roubo.' } }
+];
 const QUESTS = {
   animais: { n: 'Os animais desaparecidos', d: 'Encontre 3 animais perdidos nos Campos de Valdora e fale com o Fazendeiro Tomás.', need: 3, xp: 80, gold: 30, prog: () => S.sheep.length },
   minerio: { n: 'O minério perdido', d: 'Recupere 5 minérios dos Ciclopes e Golens e leve ao Ferreiro Orren.', need: 5, xp: 100, gold: 40, prog: () => Math.min(5, S.ore) },
@@ -60,35 +65,61 @@ function playCut(key, done) {
   show();
 }
 function drawCut() {
-  const s = cut.c.slides[cut.i], [a, b] = BG[s.bg || 'night'], t = cut.t, z = 1 + t * .016;
-  const gr = g.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, a); gr.addColorStop(1, b); g.fillStyle = gr; g.fillRect(0, 0, W, H);
-  g.save(); g.translate(W / 2, H / 2); g.scale(z, z); g.translate(-W / 2 - t * 2, -H / 2);
-  for (let i = 0; i < 70; i++) { g.fillStyle = `rgba(255,${160 + i % 80},70,${.5 * Math.abs(Math.sin(t * .9 + i))})`; g.fillRect((i * 97 + t * (14 + i % 5 * 8)) % W, H - ((i * 53 + t * (22 + i % 7 * 6)) % H), 2, 2); }
-  g.fillStyle = '#000b'; g.fillRect(-40, 380, W + 80, 200);
-  if (s.somb && ART.sombroso.complete) { const im = ART.sombroso, h = 470 + Math.sin(t * 1.2) * 8, w = im.width * h / im.height; g.save(); g.shadowColor = '#a060ff'; g.shadowBlur = 50; g.globalAlpha = .95; g.drawImage(im, 700 - w / 2, 395 - h, w, h); g.restore(); g.fillStyle = '#e8d8ff'; g.shadowColor = '#fff'; g.shadowBlur = 14; g.fillRect(676, 130, 10, 4); g.fillRect(714, 130, 10, 4); g.shadowBlur = 0; }
-  (s.act || []).forEach((u, i) => drawSpr(g, u.c, u.x, 430 + (i % 2) * 12, { di: u.di, fx: u.di === 2 ? 1 : u.di === 6 ? -1 : 0, fy: 1, m: u.m, t: t % 1.4, ph: t * 4, sil: u.sil, el: CHARS[u.c] && CHARS[u.c].el, sc: (u.sc || 1) * 2.7 }));
-  if (s.exec) drawSpr(g, 'exec', 480, 440, { di: 0, fx: 0, fy: 1, m: s.dead ? 'dead' : 'idle', t: s.dead ? t : 0, sc: 2.1 });
-  if (s.art) s.art.forEach((k, i) => { const im = ART['b_' + k]; if (!im.complete) return; const x = 60 + i * 140, h = 300, w = im.width * h / im.height; g.save(); g.shadowColor = CHARS[k].el; g.shadowBlur = 30; g.fillStyle = '#efe0c8'; g.fillRect(x - 6, 90 - 6, 120, h + 12); g.restore(); g.drawImage(im, x + 57 - w / 2, 90, w, h); g.strokeStyle = CHARS[k].el; g.lineWidth = 3; g.strokeRect(x - 6, 84, 120, h + 12); });
+  const s = cut.c.slides[cut.i], t = cut.t, z = 1 + t * .014;
+  g.save(); g.translate(W / 2, H / 2); g.scale(z, z); g.translate(-W / 2 - t * 1.5, -H / 2);
+  drawCinema(g, s.bg || 'night', t);
+  for (let i = 0; i < 50; i++) { g.fillStyle = `rgba(255,${180 + i % 60},90,${.45 * Math.abs(Math.sin(t * .9 + i))})`; g.fillRect((i * 97 + t * (10 + i % 5 * 6)) % W, H - ((i * 53 + t * (18 + i % 7 * 5)) % H), 2, 2); }
+  if (s.somb && ART.sombroso.complete) { const im = ART.sombroso, h = 480 + Math.sin(t * 1.2) * 8, w = im.width * h / im.height; g.save(); g.shadowColor = '#a060ff'; g.shadowBlur = 60; g.globalAlpha = .96; g.drawImage(im, 690 - w / 2, 420 - h, w, h); g.restore(); g.fillStyle = '#f0e0ff'; g.shadowColor = '#fff'; g.shadowBlur = 16; g.fillRect(666, 150, 11, 4); g.fillRect(704, 150, 11, 4); g.shadowBlur = 0; }
+  (s.act || []).forEach((u, i) => { const by = 440 + (i % 2) * 14, art = ART['art_' + u.c], sc = u.sc || 1;
+    g.fillStyle = 'rgba(0,0,0,.45)'; g.beginPath(); g.ellipse(u.x, by, 70 * sc, 14 * sc, 0, 0, 7); g.fill();
+    if (art && art.complete && art.width && !u.sil) { const h = 400 * sc, w = art.width * h / art.height, br = Math.sin(t * 1.6 + i) * 3, lean = u.m === 'atk' ? Math.sin(t * 5) * .06 : u.m === 'hurt' ? -.08 : 0, up = u.m === 'cast' ? -8 - Math.sin(t * 4) * 6 : 0; g.save(); g.translate(u.x, by); g.rotate(lean); g.shadowColor = (CHARS[u.c] && CHARS[u.c].el) || '#fff'; g.shadowBlur = u.m === 'cast' ? 36 : 10; g.drawImage(art, -w / 2, -h - br + up, w, h + br); g.restore(); if (u.m === 'cast') { const gr = g.createRadialGradient(u.x, by - 120 * sc, 0, u.x, by - 120 * sc, 180); gr.addColorStop(0, ((CHARS[u.c] && CHARS[u.c].el) || '#fff') + '66'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(u.x - 200, by - 320, 400, 400); } }
+    else drawSpr(g, u.c, u.x, by, { di: u.di, fx: u.di === 2 ? 1 : u.di === 6 ? -1 : 0, fy: 1, m: u.m, t: t % 1.4, ph: t * 4, sil: u.sil, el: CHARS[u.c] && CHARS[u.c].el, sc: (u.sc || 1) * 2.7 }); });
+  if (s.exec) drawSpr(g, 'exec', 480, 450, { di: 0, fx: 0, fy: 1, m: s.dead ? 'dead' : 'idle', t: s.dead ? t : 0, sc: 2.1 });
+  if (s.art) s.art.forEach((k, i) => { const im = ART['art_' + k]; if (!im.complete || !im.width) return; const h = 360, w = im.width * h / im.height, x = 70 + i * 140 + 56, a = Math.min(1, Math.max(0, t * 1.4 - i * .25)); g.save(); g.globalAlpha = a; g.shadowColor = CHARS[k].el; g.shadowBlur = 34; g.drawImage(im, x - w / 2, 430 - h - (1 - a) * 20, w, h); g.restore(); });
   g.restore();
   if (s.flash) { g.fillStyle = `rgba(255,255,255,${Math.max(0, 1 - t * .5)})`; g.fillRect(0, 0, W, H); }
+  cinFinish(g, t, W, H);
   if (s.title) { g.fillStyle = '#e8a33d'; g.textAlign = 'center'; g.font = 'bold 64px Georgia'; g.shadowColor = '#e8a33d'; g.shadowBlur = 24; g.fillText('ELYNDOR', W / 2, 190); g.font = '24px Georgia'; g.fillText('AS CINZAS DE VALDORA', W / 2, 230); g.shadowBlur = 0; g.textAlign = 'left'; }
-  g.fillStyle = '#000'; g.fillRect(0, 0, W, 46); g.fillRect(0, H - 46, W, 46);
+  if (s.card) { g.textAlign = 'center'; g.fillStyle = '#e8a33d'; g.font = 'bold 20px Georgia'; g.fillText(s.card[0], W / 2, 200); g.fillStyle = '#fff'; g.font = 'bold 44px Georgia'; g.shadowColor = '#000'; g.shadowBlur = 12; g.fillText(s.card[1], W / 2, 255); g.shadowBlur = 0; g.textAlign = 'left'; }
+  g.fillStyle = '#000'; g.fillRect(0, 0, W, 50); g.fillRect(0, H - 50, W, 50);
 }
 // ---------- JOGADOR ----------
-function newPlayer() { const s = st(); P = { x: 750, y: 470, fx: 0, fy: 1, hp: s.mhp, mp: s.mmp, m: 'idle', mt: 0, ph: 0, atkCd: 0, skCd: 0, inv: 0, stun: 0, dead: false, dt: 0, r: 12, pend: null, stepT: 0 }; }
+function newPlayer() { const s = st(); P = { x: 750, y: 470, fx: 0, fy: 1, hp: s.mhp, mp: s.mmp, m: 'idle', mt: 0, ph: 0, atkCd: 0, skCd: 0, inv: 0, stun: 0, dead: false, dt: 0, r: 12, pend: null, stepT: 0, combo: 0, comboT: 0, dodgeCd: 0, dash: null, lock: 0 }; S.chg = 0; }
 function setM(m) { if (P.m !== m) { P.m = m; P.mt = 0; } }
 const canAct = () => !P.dead && P.stun <= 0 && !cut && !dlgOn && !paused && P.m !== 'hurt';
 function aim() { let best = null, bd = 300; E.forEach(e => { if (e.dead) return; const d = len(e.x - P.x, e.y - P.y); if (d < bd) { bd = d; best = e; } }); if (best) { const d = bd || 1; P.fx = (best.x - P.x) / d; P.fy = (best.y - P.y) / d; } }
+const WS = { kael: 'sword', lyra: 'staff', eld: 'bowshot', ser: 'wand', dar: 'mace', tho: 'hammer' };
+let hs = 0;
 function attack() {
-  if (!canAct() || P.atkCd > 0) return; const c = CHARS[S.hero], s = st(); P.atkCd = .5; aim(); setM('atk'); netFx({ k: 'atk' });
-  if (c.ranged) { sfx(S.hero === 'eld' ? 'bow' : 'slash'); P.pend = { t: .22, fn: () => { shoot(P.x + P.fx * 14, P.y - 40, P.fx, P.fy, c.el, s.at, 430, 'p', c.el); netFx({ k: 'shot', fx: P.fx, fy: P.fy, col: c.el }); } }; }
-  else { sfx('slash'); P.pend = { t: .15, fn: () => melee(s.at, c.rng) }; }
+  if (!canAct() || P.atkCd > 0) return; const c = CHARS[S.hero], s = st(); aim();
+  P.combo = P.comboT > 0 ? (P.combo + 1) % 3 : 0; P.comboT = .75; P.atkCd = P.combo === 2 ? .55 : .4; setM('atk'); P.mt = 0; netFx({ k: 'atk' });
+  const cm = P.combo, mult = [1, 1.1, 1.8][cm]; sfx(WS[S.hero]);
+  { const was = S.chg || 0; S.chg = Math.min(10, was + 1); if (was < 10 && S.chg === 10) { sfx('ready'); log('Ataque carregado pronto! Aperte R.', 'Combate'); } }
+  if (c.ranged) P.pend = { t: .22, fn: () => { const sp = S.hero === 'eld' && cm === 2 ? [-.18, 0, .18] : [0]; sp.forEach(d => { const a = Math.atan2(P.fy, P.fx) + d; shoot(P.x + P.fx * 14, P.y - 42, Math.cos(a), Math.sin(a), c.el, s.at * mult * (sp.length > 1 ? .7 : 1), S.hero === 'eld' ? 520 : 400, 'p', c.el, 0, { kind: S.hero === 'eld' ? 'arrow' : S.hero === 'ser' ? 'orb' : 'bolt' }); }); netFx({ k: 'shot', fx: P.fx, fy: P.fy, col: c.el }); } };
+  else P.pend = { t: .16, fn: () => melee(s.at * mult, c.rng * (cm === 2 ? 1.35 : 1), cm) };
 }
-function melee(dmg, r) {
-  FX.push({ k: 'slash', x: P.x + P.fx * 30, y: P.y - 36 + P.fy * 16, a: Math.atan2(P.fy, P.fx), t: 0, life: .22, col: CHARS[S.hero].el });
-  E.forEach(e => { if (e.dead) return; const dx = e.x - P.x, dy = e.y - P.y, d = len(dx, dy); if (d < r + e.r && (dx * P.fx + dy * P.fy) >= -.3 * d) { dmgE(e, dmg + rnd(0, 4), 'phys'); e.x += dx / (d || 1) * 8; e.y += dy / (d || 1) * 8; } });
+function melee(dmg, r, cm) {
+  const a = Math.atan2(P.fy, P.fx); FX.push({ k: 'slash', x: P.x + P.fx * 30, y: P.y - 40 + P.fy * 16, a, t: 0, life: .22, col: CHARS[S.hero].el }); if (cm === 2) ring(P.x + P.fx * 40, P.y, 60, CHARS[S.hero].el);
+  E.forEach(e => { if (e.dead) return; const dx = e.x - P.x, dy = e.y - P.y, d = len(dx, dy); if (d < r + e.r && (dx * P.fx + dy * P.fy) >= -.3 * d) { dmgE(e, dmg + rnd(0, 4), 'phys'); const kb = cm === 2 ? 26 : 9; e.x += dx / (d || 1) * kb; e.y += dy / (d || 1) * kb; if (cm === 2 && !e.boss) e.stun = Math.max(e.stun, .35); sfx(S.hero === 'kael' ? 'swordhit' : 'hit'); } });
 }
-function shoot(x, y, fx, fy, col, dmg, spd, from, elem, pierce) { PR.push({ x, y, vx: fx * spd, vy: fy * spd, col, dmg, life: 1.1, from, elem, pierce, hit: new Set(), big: pierce ? 1 : 0 }); }
+function charged() {
+  if (!canAct()) return; if ((S.chg || 0) < 10) { log('Ataque carregado: ' + (S.chg || 0) + '/10 ataques normais.', 'Combate'); return; }
+  S.chg = 0; aim(); setM('cast'); P.mt = 0; P.lock = 1; sfx('charge'); netFx({ k: 'skill' }); P.inv = Math.max(P.inv, 1);
+  const h = S.hero, c = CHARS[h], s = st(), foes = r => E.filter(e => !e.dead && len(e.x - P.x, e.y - P.y) < r + e.r);
+  P.pend = { t: .85, fn: () => { sfx('special'); shake = 1;
+    if (h === 'kael') { ring(P.x, P.y, 180, c.el); ring(P.x + P.fx * 90, P.y + P.fy * 50, 120, '#ffd060'); foes(180).forEach(e => { dmgE(e, s.at * 4.5, 'fire'); e.stun = .8; }); }
+    else if (h === 'lyra') { ring(P.x, P.y, 160, c.el); P.hp = Math.min(s.mhp, P.hp + s.mhp * .6); FX.push({ k: 'txt', x: P.x, y: P.y - 100, s: '+' + Math.round(s.mhp * .6), col: '#6f8', t: 0, life: 1 }); foes(160).forEach(e => dmgE(e, s.at * 3, 'water')); }
+    else if (h === 'eld') { for (let i = -2; i <= 2; i++) { const a = Math.atan2(P.fy, P.fx) + i * .12; shoot(P.x, P.y - 42, Math.cos(a), Math.sin(a), c.el, s.at * 3.2, 720, 'p', 'wind', 1, { kind: 'arrow' }); } }
+    else if (h === 'ser') { ring(P.x, P.y, 230, c.el); foes(230).forEach(e => { e.x += (P.x - e.x) * .5; e.y += (P.y - e.y) * .5; dmgE(e, s.at * 3.5, 'dark'); e.stun = e.boss ? .6 : 2.5; }); }
+    else if (h === 'dar') { ring(P.x, P.y, 150, c.el); foes(150).forEach(e => { dmgE(e, s.at * 3.5, 'earth'); e.stun = 1.3; }); }
+    else { ring(P.x, P.y, 190, c.el); ring(P.x, P.y, 110, '#fff'); shake = 1.4; foes(190).forEach(e => dmgE(e, s.at * 5, 'earth')); }
+  } };
+}
+function dodge() {
+  if (!canAct() || P.dodgeCd > 0) return; let ix = (keys['d'] || keys['arrowright'] ? 1 : 0) - (keys['a'] || keys['arrowleft'] ? 1 : 0) + J.x, iy = (keys['s'] || keys['arrowdown'] ? 1 : 0) - (keys['w'] || keys['arrowup'] ? 1 : 0) + J.y, l = len(ix, iy);
+  if (l < .2) { ix = P.fx; iy = P.fy; l = 1; } ix /= l; iy /= l; P.dash = { t: .22, vx: ix * 430, vy: iy * 430 }; P.fx = ix; P.fy = iy; P.inv = Math.max(P.inv, .32); P.dodgeCd = .9; sfx('dodge'); setM('run');
+}
+function shoot(x, y, fx, fy, col, dmg, spd, from, elem, pierce, o) { PR.push({ x, y, vx: fx * spd, vy: fy * spd, col, dmg, life: 1.1, from, elem, pierce, hit: new Set(), big: pierce ? 1 : 0, kind: o && o.kind }); }
 function ring(x, y, r, col) { FX.push({ k: 'ring', x, y, r, col, t: 0, life: .55 }); for (let i = 0; i < 22; i++) { const a = rnd(0, 6.28), v = rnd(60, r * 2.2); FX.push({ k: 'sp', x, y: y - 10, vx: Math.cos(a) * v, vy: Math.sin(a) * v * .6, col, t: 0, life: rnd(.3, .7) }); } }
 function skill() {
   if (!canAct() || P.skCd > 0) return; if (!S.skills) { log('Habilidades elementais ainda adormecidas...'); return; } if (P.mp < BALANCE.skillCost) { log('MP insuficiente.'); return; }
@@ -112,7 +143,7 @@ function gain(x) {
   while (S.lv < 10 && S.xp >= XPT[S.lv]) { S.lv++; const s = st(); P.hp = s.mhp; P.mp = s.mmp; sfx('lvl'); ring(P.x, P.y, 80, '#ffd86a'); log('Nível ' + S.lv + '!', 'Sistema'); }
 }
 function dmgE(e, d, elem) {
-  if (e.dead) return; d = Math.max(1, Math.round(d - (e.def || 0))); if (e.boss && elem === 'fire') d = Math.round(d * 1.25); e.hp -= d; e.hit = .12;
+  if (e.dead) return; d = Math.max(1, Math.round(d - (e.def || 0))); if (e.boss && elem === 'fire') d = Math.round(d * 1.25); e.hp -= d; e.hit = .12; hs = Math.max(hs, e.boss ? .07 : .045); if (!e.boss) e.stun = Math.max(e.stun, .12); for (let q = 0; q < 6; q++) FX.push({ k: 'sp', x: e.x, y: e.y - 36, vx: rnd(-120, 120), vy: rnd(-140, 20), col: '#ffe9a0', t: 0, life: .35 });
   FX.push({ k: 'txt', x: e.x + rnd(-8, 8), y: e.y - (e.boss ? 240 : 80), s: String(d), col: '#fff', t: 0, life: .8 }); sfx('hit');
   if (e.hp <= 0) {
     e.dead = true; e.dt = 0;
@@ -126,6 +157,7 @@ function spawnE(type, x, y, camp) { const t = ET[type], hp = Math.round(t.hp * (
 function startWave(types, cb) { const sc = SCN[S.scene]; types.forEach((t, i) => { const a = i / types.length * 6.28 + .5; spawnE(t, Math.max(40, Math.min(sc.w - 40, P.x + Math.cos(a) * 260)), Math.max(80, Math.min(sc.h - 40, P.y + Math.sin(a) * 200))); E[E.length - 1].angry = true; }); wave = { cb }; }
 // ---------- IA ----------
 function aiE(e, dt) {
+  if (!isFinite(e.x) || !isFinite(e.y)) { e.x = P.x + 200; e.y = P.y; }
   e.t += dt; e.hit -= dt; e.am -= dt; if (e.dead) { e.dt += dt; return; } if (e.stun > 0) { e.stun -= dt; e.mv = 0; return; }
   if (e.boss) return aiBoss(e, dt);
   const dx = P.x - e.x, dy = P.y - e.y, dist = len(dx, dy) || 1; e.mv = 0;
@@ -133,7 +165,7 @@ function aiE(e, dt) {
   if (e.type === 'bat') {
     if (e.dash > 0) { e.dash -= dt; e.x += e.dvx * dt; e.y += e.dvy * dt; e.mv = 1; e.ph += dt * 14; if (!e.hitd && len(P.x - e.x, P.y - e.y) < 32) { e.hitd = 1; hurtP(e.at); } return; }
     if (e.aim > 0) { e.aim -= dt; e.fx = (e.ax - e.x) / (len(e.ax - e.x, e.ay - e.y) || 1); e.fy = (e.ay - e.y) / (len(e.ax - e.x, e.ay - e.y) || 1); if (e.aim <= 0) { const d = len(e.ax - e.x, e.ay - e.y) || 1; e.dvx = (e.ax - e.x) / d * 420; e.dvy = (e.ay - e.y) / d * 420; e.dash = .4; e.hitd = 0; e.cd = 2.2; } return; }
-    const a = e.t * 1.3 + e.camp, tx = P.x + Math.cos(a) * 150, ty = P.y + Math.sin(a) * 100, d = len(tx - e.x, ty - e.y) || 1; e.x += (tx - e.x) / d * e.sp * dt; e.y += (ty - e.y) / d * e.sp * dt; e.mv = 1; e.ph += dt * 12; e.fx = dx / dist; e.fy = dy / dist;
+    const a = e.t * 1.3 + (e.camp || 0), tx = P.x + Math.cos(a) * 150, ty = P.y + Math.sin(a) * 100, d = len(tx - e.x, ty - e.y) || 1; e.x += (tx - e.x) / d * e.sp * dt; e.y += (ty - e.y) / d * e.sp * dt; e.mv = 1; e.ph += dt * 12; e.fx = dx / dist; e.fy = dy / dist;
     e.cd -= dt; if (e.cd <= 0 && dist < 400) { e.aim = .6; e.ax = P.x; e.ay = P.y; } return;
   }
   const T_ = ET[e.type];
@@ -154,12 +186,13 @@ function aiBoss(e, dt) {
     if (e.cd <= 0) { const r = Math.random(); e.atk = r < .4 ? { k: 'slam', t: p2 ? .7 : 1, x: P.x, y: P.y, r: 125 } : r < .7 ? { k: 'spin', t: .9, r: 150 } : { k: 'chain', t: .9, tx: P.x, ty: P.y }; sfx('roar'); } }
 }
 function updPlayer(dt) {
-  P.mt += dt; P.atkCd -= dt; P.skCd -= dt; P.inv -= dt; P.stun -= dt; warnT -= dt; P.mp = Math.min(st().mmp, P.mp + dt * 4);
+  P.mt += dt; P.comboT -= dt; P.dodgeCd -= dt; P.lock -= dt; P.atkCd -= dt; P.skCd -= dt; P.inv -= dt; P.stun -= dt; warnT -= dt; P.mp = Math.min(st().mmp, P.mp + dt * 4);
   if (P.pullT > 0) { P.pullT -= dt; P.x += (P.px - P.x) * Math.min(1, dt * 10); P.y += (P.py - P.y) * Math.min(1, dt * 10); }
   if (P.dead) { P.dt += dt; if (P.dt > 2.4) { P.dead = false; P.hp = st().mhp / 2; P.inv = 2; P.m = 'idle'; if (S.scene === 'village') { P.x = 750; P.y = 470; } } return; }
   if (P.pend) { P.pend.t -= dt; if (P.pend.t <= 0) { const f = P.pend.fn; P.pend = null; f(); } }
-  if (held.a || keys['j'] || keys[' ']) attack(); if (held.s || keys['k']) skill();
-  const locked = P.stun > 0 || (P.m === 'atk' && P.mt < .4) || (P.m === 'cast' && P.mt < .6) || (P.m === 'hurt' && P.mt < .25);
+  if (P.dash) { const d = P.dash; d.t -= dt; const sc = SCN[S.scene]; let nx = P.x + d.vx * dt, ny = P.y + d.vy * dt; const hit = (x, y) => sc.col.some(r => x > r[0] - 6 && x < r[0] + r[2] + 6 && y > r[1] && y < r[1] + r[3] + 10); if (hit(nx, P.y)) nx = P.x; if (hit(P.x, ny)) ny = P.y; P.x = Math.max(20, Math.min(sc.w - 20, nx)); P.y = Math.max(50, Math.min(sc.h - 14, ny)); P.ph += dt * 20; FX.push({ k: 'ghost', x: P.x, y: P.y, fx: P.fx, fy: P.fy, t: 0, life: .25 }); if (d.t <= 0) P.dash = null; return; }
+  if (held.a || keys['j'] || keys[' ']) attack(); if (held.s || keys['k'] || keys['t']) skill();
+  const locked = P.stun > 0 || P.lock > 0 || (P.m === 'atk' && P.mt < .4) || (P.m === 'cast' && P.mt < .6) || (P.m === 'hurt' && P.mt < .25);
   if (!locked && (P.m === 'atk' || P.m === 'cast' || P.m === 'hurt')) setM('idle');
   let ix = (keys['d'] || keys['arrowright'] ? 1 : 0) - (keys['a'] || keys['arrowleft'] ? 1 : 0) + J.x, iy = (keys['s'] || keys['arrowdown'] ? 1 : 0) - (keys['w'] || keys['arrowup'] ? 1 : 0) + J.y, l = len(ix, iy); if (l > 1) { ix /= l; iy /= l; l = 1; }
   if (!locked && !dlgOn && !cut) {
@@ -173,7 +206,7 @@ function updPlayer(dt) {
 }
 function updPR(dt) {
   PR.forEach(p => { p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; if (Math.random() < .7) FX.push({ k: 'sp', x: p.x, y: p.y, vx: rnd(-20, 20), vy: rnd(-20, 20), col: p.col, t: 0, life: .25 });
-    if (p.from === 'p') E.forEach(e => { if (!e.dead && !p.hit.has(e) && len(e.x - p.x, e.y - (e.boss ? 90 : 36) - p.y) < e.r + 16 + (e.boss ? 40 : 0)) { dmgE(e, p.dmg + rnd(0, 3), p.elem === 'wind' ? 'wind' : 'phys'); p.hit.add(e); if (!p.pierce) p.life = 0; } });
+    if (p.from === 'p') E.forEach(e => { if (!e.dead && !p.hit.has(e) && len(e.x - p.x, e.y - (e.boss ? 90 : 36) - p.y) < e.r + 16 + (e.boss ? 40 : 0)) { dmgE(e, p.dmg + rnd(0, 3), p.elem === 'wind' ? 'wind' : 'phys'); p.hit.add(e); if (p.kind === 'arrow') sfx('arrowhit'); if (p.kind === 'orb') { ring(p.x, p.y + 30, 55, '#b070ff'); E.forEach(o => { if (!o.dead && o !== e && len(o.x - p.x, o.y - p.y) < 70) dmgE(o, p.dmg * .5, 'dark'); }); } if (p.kind === 'bolt') P.hp = Math.min(st().mhp, P.hp + st().mhp * .02); if (!p.pierce) p.life = 0; } });
     else if (p.from === 'e' && !P.dead && len(P.x - p.x, P.y - 40 - p.y) < 18) { hurtP(p.dmg); p.life = 0; } });
   PR = PR.filter(p => p.life > 0);
 }
@@ -181,7 +214,8 @@ function update(dt) {
   T += dt; shake = Math.max(0, shake - dt * 2);
   Object.values(R).forEach(r => { const dx = r.tx - r.x, dy = r.ty - r.y, d = len(dx, dy); r.x += dx * Math.min(1, dt * 10); r.y += dy * Math.min(1, dt * 10); r.ph += d * .07; r.t += dt; if (r.say) { r.sayT -= dt; if (r.sayT < 0) r.say = null; } if ((r.m === 'walk' || r.m === 'run') && d < 1) r.m = 'idle'; });
   if (cut) { cut.t += dt; return; }
-  if (S.scene === 'title' || !P || paused) return;
+  if (TB) { updTB(dt); return; }
+  if (S.scene === 'title' || !P || paused) return; if (hs > 0) { hs -= dt; return; }
   if (!dlgOn) { updPlayer(dt); E.forEach(e => aiE(e, dt)); updPR(dt);
     if (S.scene === 'campos') CAMPS.forEach((c, i) => { if (!E.some(e => e.camp === i)) { S.campT[i] = (S.campT[i] || 0) - dt; if (S.campT[i] <= 0) spawnE(c[0], c[1], c[2], i); } }); }
   FX.forEach(f => { f.t += dt; if (f.k === 'sp') { f.x += f.vx * dt; f.y += f.vy * dt; } }); FX = FX.filter(f => f.t < f.life); E = E.filter(e => !(e.dead && e.dt > 1));
@@ -195,15 +229,15 @@ function setObj(t) { objective = t; }
 function warn(m) { if (warnT > 0) return; warnT = 4; say([m], 'Aviso'); }
 function zones() {
   if (S.scene === 'village') {
-    if (P.y < 40 && Math.abs(P.x - 750) < 70) { if (S.quest >= 3) { loadScene('campos', 900, 1040); if (!S.seenCampos) { S.seenCampos = 1; setObj('Fortaleça-se nos Campos (nível ' + BALANCE.dungeonMinLv + ') e aceite missões em Valdora'); say(['Os Campos de Valdora se abrem diante de vocês. Criaturas acorrentadas vagam por aqui, e elas voltam sempre. Ótimo para ganhar experiência... e perigoso para quem se descuida.'], 'Campos de Valdora'); } } else { P.y = 70; warn('O portão norte está fechado durante a noite. Converse com os moradores primeiro.'); } }
-    if (S.quest >= 3 && P.y > 800 && Math.abs(P.x - 750) < 70) { if (S.lv < BALANCE.dungeonMinLv) { P.y = 770; warn('Auren, ao longe: "As ruínas estão cheias do mesmo veneno do rio. Volte com mais força (nível ' + BALANCE.dungeonMinLv + '). Os Campos ao norte servem para isso."'); } else enterDungeon(); }
-  } else if (S.scene === 'campos' && P.y > 1070 && Math.abs(P.x - 900) < 110) { loadScene('village', 750, 80); setObj(S.quest >= 4 ? '' : S.lv >= BALANCE.dungeonMinLv ? 'Desça às ruínas sob a ponte antiga (sul do rio)' : 'Fortaleça-se (nível ' + BALANCE.dungeonMinLv + ') e aceite missões em Valdora'); }
+    if (P.y < 40 && Math.abs(P.x - 750) < 70) { if (S.quest >= 3) { loadScene('campos', 900, 1040); if (!S.seenCampos) { S.seenCampos = 1; setObj('Investigue os Campos: encontre as 3 pistas (' + S.clues.length + '/3)'); playCut('card3', () => say(['Os Campos de Valdora se abrem diante de vocês. Criaturas acorrentadas vagam por aqui, e elas voltam sempre: ótimo para ganhar experiência, perigoso para quem se descuida.', 'Procure por sinais da Ordem: soldados mortos, a origem do veneno e um acampamento escondido. Siga a seta dourada no alto da tela.'], 'Campos de Valdora')); } } else { P.y = 70; warn('O portão norte está fechado durante a noite. Converse com os moradores primeiro.'); } }
+    if (S.quest >= 3 && P.y > 800 && Math.abs(P.x - 750) < 70) { if (S.clues.length < 3) { P.y = 770; warn('Auren, ao longe: "Ainda não sabem o que há lá embaixo. Investiguem os Campos ao norte antes de descer."'); } else if (S.lv < BALANCE.dungeonMinLv) { P.y = 770; warn('Auren, ao longe: "As ruínas estão cheias do mesmo veneno do rio. Volte com mais força (nível ' + BALANCE.dungeonMinLv + '). Os Campos ao norte servem para isso."'); } else enterDungeon(); }
+  } else if (S.scene === 'campos' && P.y > 1070 && Math.abs(P.x - 900) < 110) { loadScene('village', 750, 80); setObj(S.quest >= 4 ? '' : S.clues.length < 3 ? 'Investigue os Campos: encontre as 3 pistas (' + S.clues.length + '/3)' : S.lv >= BALANCE.dungeonMinLv ? 'Desça às ruínas sob a ponte antiga (sul do rio)' : 'Treine até o nível ' + BALANCE.dungeonMinLv + ' e desça às ruínas'); }
   else if (S.scene === 'd1' && S.doorOpen && P.y < 70 && Math.abs(P.x - 480) < 60) { S.doorOpen = 0; loadScene('d2', 480, 490); playCut('vision', () => { A.theme('battle'); setObj('Derrote os guardiões corrompidos da Galeria das Raízes'); startWave(['ogre', 'ogre', 'golem', 'bat', 'bat'], () => { S.doorOpen = 1; setObj('Siga pela porta ao norte'); A.theme('dungeon'); }); }); }
-  else if (S.scene === 'd2' && S.doorOpen && P.y < 70 && Math.abs(P.x - 480) < 60) { S.doorOpen = 0; loadScene('boss', 480, 490); setObj('Derrote o Carrasco'); P.inv = 1; playCut('boss', () => { const hp = BALANCE.bossHP; E.push({ boss: 1, type: 'exec', x: 480, y: 190, hp, mhp: hp, r: 55, fx: 0, fy: 1, t: 0, cd: 2, stun: 0, hit: 0, dead: false, dt: 0, at: 22, def: 2, ph: 0, am: 0, mv: 0 }); A.theme('boss'); }); }
+  else if (S.scene === 'd2' && S.doorOpen && P.y < 70 && Math.abs(P.x - 480) < 60) { S.doorOpen = 0; loadScene('boss', 480, 490); setObj('Derrote o Carrasco'); P.inv = 1; playCut('card5', () => playCut('boss', () => startTB())); }
 }
 function enterDungeon() {
   S.quest = 4; loadScene('d1', 480, 490); setObj('Derrote as criaturas do Santuário das Raízes');
-  say(['Entrada subterrânea: raízes se movem sozinhas e correntes arrastam pelo chão. Os monstros de cima vieram daqui.'], 'Santuário das Raízes', () => { A.theme('battle'); startWave(['wolf', 'wolf', 'wolf', 'bat', 'bat'], () => { S.doorOpen = 1; setObj('Siga pela porta ao norte'); A.theme('dungeon'); }); });
+  playCut('card4', () => say(['Entrada subterrânea: raízes se movem sozinhas e correntes arrastam pelo chão. Os monstros de cima vieram daqui.'], 'Santuário das Raízes', () => { A.theme('battle'); startWave(['wolf', 'wolf', 'wolf', 'bat', 'bat'], () => { S.doorOpen = 1; setObj('Siga pela porta ao norte'); A.theme('dungeon'); }); }));
 }
 function bossDead() {
   setObj(''); A.theme('sad');
@@ -223,7 +257,7 @@ function qTalk(id, give, active, done, who) {
 function talk(n) {
   const id = n.id, w = n.n;
   if (S.quest < 3) {
-    const L = { auren: ['"Engraçado como as pessoas passam a vida procurando respostas, sem perceber que algumas perguntas deveriam permanecer adormecidas."', '"Apenas um lugar tranquilo para descansar. Embora pareça que a tranquilidade esteja ficando cada vez mais rara."'], ferr: ['Goblins levaram meu minério e agora essas criaturas inquietas rondam o vale... Que tempos! Tome estas moedas para as primeiras armas.'], taver: ['Dizem que há criaturas nas montanhas e que a água do rio anda estranha. Rumores de taverna... por enquanto.'], mor: ['Os animais estão inquietos esta semana. Algo ruim vem aí, eu sinto.'], mira: ['Você ouviu o sino da praça? Ele toca sozinho quando eu fico triste... Será que é bobagem?'], farm: ['Tenho andado preocupado com meus animais. Volte mais tarde, rapaz.'] };
+    const L = { auren: ['"Engraçado como as pessoas passam a vida procurando respostas, sem perceber que algumas perguntas deveriam permanecer adormecidas."', '"Apenas um lugar tranquilo para descansar. Embora pareça que a tranquilidade esteja ficando cada vez mais rara."', '"Quem escolhe o silêncio costuma ter motivos. Você, por exemplo, parece carregar algo que ainda não nomeou."'], ferr: ['Goblins levaram meu minério e agora essas criaturas inquietas rondam o vale... Que tempos! Tome estas moedas para as primeiras armas.', 'Esse cheiro de enxofre no vento... meu avô dizia que era o hálito do que dorme sob Valdora. Bobagem de velho, ou assim eu achava.'], taver: ['Dizem que há criaturas nas montanhas e que a água do rio anda estranha. Rumores de taverna... por enquanto.', 'Há três noites um soldado de cinza passou por aqui perguntando pela ponte antiga. Não deixou nome, só uma corrente suja de lama no balcão.'], mor: ['Os animais estão inquietos esta semana. Algo ruim vem aí, eu sinto.'], mira: ['Você ouviu o sino da praça? Ele toca sozinho quando eu fico triste... Será que é bobagem?', 'O viajante da fonte disse que eu tenho "olhos de quem escuta". Não entendi, mas gostei.'], farm: ['Tenho andado preocupado com meus animais. Volte mais tarde, rapaz.'] };
     say(L[id], w, () => { if (['auren', 'ferr', 'taver'].includes(id) && !S.talked[id]) { S.talked[id] = 1; if (id === 'ferr') { S.gold += 30; sfx('coin'); } }
       if (S.quest === 0 && S.talked.auren && S.talked.ferr && S.talked.taver) { S.quest = 1; setObj(''); setTimeout(night, 600); } else if (S.quest === 0) setObj('Converse com os moradores (' + Object.keys(S.talked).length + '/3): Auren, Ferreiro, Taverneiro'); });
     return;
@@ -235,17 +269,23 @@ function talk(n) {
   else if (id === 'mor') say(['A água ficou turva... Dizem que as ruínas sob a ponte estão ligadas ao rio. Quem for lá, vá forte (nível ' + BALANCE.dungeonMinLv + ').'], w);
   else say(['A pedra azul do viajante brilha quando eu chego perto... ele finge que não percebe. Você também viu?'], w);
 }
+function reunion() {
+  const h = S.hero, mates = Object.keys(CHARS).filter(k => k !== 'aur' && k !== h && CHARS[k].fac === CHARS[h].fac), ids = [h, ...mates].slice(0, 3);
+  CUTS.reunion.slides = [{ bg: 'gold', who: 'Os heróis se reúnem', act: ids.map((k, i) => ({ c: k, x: 250 + i * 230, m: 'idle' })), tx: 'Na estrada, os caminhos se cruzam. Soldados mortos, um rio envenenado e um acampamento abandonado contam a mesma história: a Ordem do Domínio esteve em Valdora e abriu algo sob a ponte antiga. Nenhum deles sabe ainda por que seus poderes despertaram, mas todos sentem que a resposta está lá embaixo.' }, { bg: 'night', who: 'Auren', act: [{ c: 'aur', x: 480, m: 'idle' }], tx: '"Vocês estão mais perto do que imaginam." O viajante some entre as árvores antes que alguém responda. A ponte antiga espera ao sul de Valdora.' }];
+  playCut('reunion', () => { setObj(S.lv >= BALANCE.dungeonMinLv ? 'Volte a Valdora e desça às ruínas sob a ponte antiga (sul do rio)' : 'Treine até o nível ' + BALANCE.dungeonMinLv + ' e desça às ruínas sob a ponte antiga'); A.theme('calm'); });
+}
 function interact() {
   if (!canAct()) return;
   const ch = CHESTS.find(c => c.s === S.scene && !S.chests[c.id] && len(c.x - P.x, c.y - P.y) < 55); if (ch) { S.chests[ch.id] = 1; sfx('chest'); S.gold += 25; gain(80); log('Baú: +25 moedas e +80 XP', 'Sistema'); return; }
   if (S.scene === 'campos') {
+    const ci = CLUES.findIndex((q, i) => len(q.x - P.x, q.y - P.y) < 70); if (ci >= 0) { const q = CLUES[ci], first = !S.clues.includes(ci); say([...q.t, q.r[S.hero]], first ? 'Pista ' + (S.clues.length + 1) + '/3' : CHARS[S.hero].n, () => { if (first) { S.clues.push(ci); sfx('chest'); gain(60); if (S.clues.length >= 3) reunion(); else setObj('Investigue os Campos: encontre as 3 pistas (' + S.clues.length + '/3)'); } }); return; }
     const si = SHEEP.findIndex((s, i) => len(s.x - P.x, s.y - P.y) < 55); if (si >= 0) { if (S.sheep.includes(si)) { say(['A ovelha já foi marcada. Tomás virá buscá-la.'], 'Ovelha'); return; } S.sheep.push(si); sfx('coin'); say(['Beeeee! Você encontrou uma ovelha perdida. (' + S.sheep.length + '/3)'], 'Ovelha'); return; }
     const gi = GLYPHS.findIndex(q => len(q.x - P.x, q.y - P.y) < 60); if (gi >= 0) { if (!S.glyph.includes(gi)) S.glyph.push(gi); sfx('chest'); say(['Inscrição antiga: "' + GLYPHS[gi].t + '"'], 'Pedra rúnica', () => log('Inscrições lidas: ' + S.glyph.length + '/3', 'Diário')); return; }
   }
   if (S.scene === 'village') { const n = NPCS.find(n => len(n.x - P.x, n.y - P.y) < 62); if (n) talk(n); }
 }
 function night() {
-  playCut('night', () => { S.quest = 2; setObj('Defenda Valdora dos Corrompidos!'); A.theme('battle'); startWave(['wolf', 'wolf', 'wolf', 'bat'], () => { S.quest = 2.5; playCut('awaken', () => { S.skills = true; S.quest = 3; setObj('Fortaleça-se nos Campos (portão norte) e aceite missões. Habilidade: K / ✦'); A.theme('calm'); const s = st(); P.hp = s.mhp; P.mp = s.mmp; gain(60); }); }); });
+  playCut('card2', () => playCut('night', () => { S.quest = 2; setObj('Defenda Valdora dos Corrompidos!'); A.theme('battle'); startWave(['wolf', 'wolf', 'wolf', 'bat'], () => { S.quest = 2.5; playCut('awaken', () => { S.skills = true; S.quest = 3; setObj('Fortaleça-se nos Campos (portão norte) e aceite missões. Habilidade: K / ✦'); A.theme('calm'); const s = st(); P.hp = s.mhp; P.mp = s.mmp; gain(60); }); }); }));
 }
 // ---------- REDE ----------
 function connect() {
@@ -267,39 +307,31 @@ const netFx = d => sendN('fx', d);
 function grass(x0, y0, cols, rows, pal) { for (let ty = y0; ty < y0 + rows; ty++) for (let tx = x0; tx < x0 + cols; tx++) { const h = hash(tx, ty); g.fillStyle = h < .5 ? pal[0] : h < .85 ? pal[1] : pal[2]; g.fillRect(tx * 32, ty * 32, 33, 33); if (h > .9) { g.fillStyle = pal[3]; g.fillRect(tx * 32 + 8, ty * 32 + 10, 2, 6); g.fillRect(tx * 32 + 14, ty * 32 + 12, 2, 5); } } }
 function tree(x, y, i) { g.fillStyle = '#0003'; g.beginPath(); g.ellipse(x, y + 4, 22, 8, 0, 0, 7); g.fill(); g.fillStyle = '#5a3a1e'; g.fillRect(x - 5, y - 28, 10, 32); const s = 1 + hash(i, 3) * .4; g.fillStyle = '#1f5a2a'; g.beginPath(); g.arc(x, y - 44, 26 * s, 0, 7); g.fill(); g.fillStyle = '#2a7a38'; g.beginPath(); g.arc(x - 8, y - 50, 16 * s, 0, 7); g.fill(); }
 function chests() { CHESTS.forEach(c => { if (c.s === S.scene && !S.chests[c.id]) { g.fillStyle = '#c8902a'; g.fillRect(c.x - 12, c.y - 10, 24, 16); g.fillStyle = '#6a4a14'; g.fillRect(c.x - 12, c.y - 10, 24, 5); g.fillStyle = '#fff9'; g.fillRect(c.x - 2, c.y - 4, 4, 5); } }); }
+function blitBG(n) { const b = getBG(n), x = Math.max(0, Math.floor(cam.x)), y = Math.max(0, Math.floor(cam.y)), w = Math.min(W, b.width - x), h = Math.min(H, b.height - y); g.drawImage(b, x, y, w, h, x, y, w, h); }
+function shimmer(rx, ry, rw, rh, col) { g.fillStyle = col; for (let i = 0; i < rw / 40; i++) { const px = rx + ((i * 53 + T * 22) % rw), py = ry + 6 + (i * 17) % Math.max(8, rh - 12); if (px > cam.x - 20 && px < cam.x + W + 20 && py > cam.y - 20 && py < cam.y + H + 20) g.fillRect(px, py, 18, 2); } }
 function drawVillage() {
-  grass(Math.floor(cam.x / 32), Math.floor(cam.y / 32), 31, 18, ['#376e3a', '#3b7640', '#2f6234', '#5a9a4a']);
-  g.fillStyle = '#9c8458'; g.fillRect(725, 0, 50, 900); g.fillRect(0, 395, 1500, 40); g.beginPath(); g.arc(775, 365, 110, 0, 7); g.fill(); g.fillStyle = '#85704a'; g.beginPath(); g.arc(775, 365, 80, 0, 7); g.fill();
-  g.fillStyle = '#2a64a8'; g.fillRect(0, 520, 1500, 60); for (let i = 0; i < 20; i++) { g.fillStyle = '#5a9ad8'; g.fillRect((i * 90 + T * 25) % 1500, 530 + (i % 4) * 12, 36, 3); }
-  g.fillStyle = '#7a5a36'; g.fillRect(700, 510, 100, 70); g.fillStyle = '#4a361e'; for (let i = 0; i < 10; i++) g.fillRect(702 + i * 10, 510, 2, 70); g.fillRect(698, 508, 4, 74); g.fillRect(798, 508, 4, 74);
-  [[200, 120, 150, 100, 'Ferreiro', '#6a2a22'], [650, 100, 180, 110, 'Taverna do Javali', '#4a3a6a'], [1100, 120, 150, 100, 'Casa de cura', '#2a5a4a'], [200, 320, 130, 90, 'Casa de Kael', '#6a4a22']].forEach(([x, y, w, h, n, rc]) => {
-    g.fillStyle = '#0003'; g.fillRect(x + 6, y + h - 4, w, 12); g.fillStyle = '#b08458'; g.fillRect(x, y, w, h); g.fillStyle = '#8a6438'; g.fillRect(x, y + h - 12, w, 12); g.fillStyle = '#ffd88a'; g.fillRect(x + w * .2, y + h * .3, 18, 18); g.fillRect(x + w * .6, y + h * .3, 18, 18); g.fillStyle = '#3a2412'; g.fillRect(x + w / 2 - 10, y + h - 34, 20, 34);
-    g.fillStyle = rc; g.beginPath(); g.moveTo(x - 12, y + 6); g.lineTo(x + w / 2, y - 40); g.lineTo(x + w + 12, y + 6); g.fill(); g.fillStyle = '#fff'; g.font = '12px Georgia'; g.textAlign = 'center'; g.fillText(n, x + w / 2, y - 46); g.textAlign = 'left'; });
-  g.fillStyle = '#8a929c'; g.beginPath(); g.arc(775, 370, 30, 0, 7); g.fill(); g.fillStyle = '#4aa0e0'; g.beginPath(); g.arc(775, 370, 22 + Math.sin(T * 3) * 1.5, 0, 7); g.fill();
-  g.fillStyle = '#5a5a66'; g.fillRect(700, 0, 20, 40); g.fillRect(780, 0, 20, 40); g.fillRect(700, 0, 100, 14);
-  if (S.quest >= 3) { g.fillStyle = '#e8a33d'; g.font = 'bold 13px Georgia'; g.textAlign = 'center'; g.fillText('▲ Campos de Valdora', 750, 64); g.fillStyle = `rgba(232,163,61,${.3 + .2 * Math.sin(T * 4)})`; g.beginPath(); g.arc(750, 840, 46, 0, 7); g.fill(); g.fillStyle = '#e8a33d'; g.fillText('▼ Ruínas subterrâneas (nv ' + BALANCE.dungeonMinLv + ')', 750, 800); g.textAlign = 'left'; }
+  blitBG('village'); shimmer(0, 520, 700, 60, 'rgba(255,255,255,.35)'); shimmer(800, 520, 700, 60, 'rgba(255,255,255,.35)');
+  g.fillStyle = '#6fb4c8'; g.beginPath(); g.arc(775, 372, 22 + Math.sin(T * 3) * 1.5, 0, 7); g.fill(); g.fillStyle = 'rgba(255,255,255,.5)'; g.beginPath(); g.arc(770, 366, 7, 0, 7); g.fill();
+  g.font = '12px Georgia'; g.textAlign = 'center'; [['Ferreiro', 275, 62], ['Taverna do Javali', 740, 42], ['Casa de cura', 1175, 62], ['Casa de Kael', 265, 262]].forEach(([n, x, y]) => { g.fillStyle = '#000a'; g.fillText(n, x + 1, y + 1); g.fillStyle = '#f4e6c0'; g.fillText(n, x, y); });
+  if (S.quest >= 3) { g.fillStyle = '#e8a33d'; g.font = 'bold 13px Georgia'; g.fillText('▲ Campos de Valdora', 750, 70); g.fillStyle = `rgba(232,163,61,${.3 + .2 * Math.sin(T * 4)})`; g.beginPath(); g.arc(750, 840, 46, 0, 7); g.fill(); g.fillStyle = '#e8a33d'; g.fillText('▼ Ruínas subterrâneas (nv ' + BALANCE.dungeonMinLv + ')', 750, 800); } g.textAlign = 'left';
   chests();
-  for (let i = 0; i < 70; i++) { const tx = hash(i, 7) * 1500, ty = hash(i, 9) * 900; if ((tx > 680 && tx < 820) || ty > 505 && ty < 600 || SCN.village.col.some(r => tx > r[0] - 30 && tx < r[0] + r[2] + 30 && ty > r[1] - 40 && ty < r[1] + r[3] + 30) || Math.abs(ty - 415) < 40 || len(tx - 775, ty - 365) < 130) continue; if (tx < cam.x - 40 || tx > cam.x + W + 40 || ty < cam.y - 60 || ty > cam.y + H + 60) continue; tree(tx, ty, i); }
 }
 function drawCampos() {
-  grass(Math.floor(cam.x / 32), Math.floor(cam.y / 32), 31, 18, ['#3a6a30', '#42743a', '#2e5a2a', '#6a9a4a']);
-  g.fillStyle = '#8a7650'; g.fillRect(860, 700, 80, 400); g.fillRect(300, 700, 640, 50); g.fillRect(860, 300, 60, 450); g.fillRect(860, 300, 700, 50);
-  g.fillStyle = '#3a5a3a'; g.fillRect(0, 0, 110, 1100); for (let i = 0; i < 16; i++) { g.fillStyle = '#6aff8a44'; g.fillRect(10 + (i * 37) % 90, (i * 140 + T * 20) % 1100, 20, 3); }
-  [[820, 500, 60, 60], [420, 300, 70, 50], [1300, 700, 70, 50], [1500, 200, 60, 60]].forEach(r => { g.fillStyle = '#0003'; g.fillRect(r[0] + 5, r[1] + r[3] - 6, r[2], 12); g.fillStyle = '#7a7a82'; g.fillRect(r[0], r[1], r[2], r[3]); g.fillStyle = '#9a9aa4'; g.fillRect(r[0], r[1], r[2], 10); });
+  blitBG('campos'); shimmer(0, 0, 100, 1100, 'rgba(140,255,160,.35)');
   g.fillStyle = `rgba(232,163,61,${.3 + .2 * Math.sin(T * 4)})`; g.beginPath(); g.arc(900, 1070, 40, 0, 7); g.fill(); g.fillStyle = '#e8a33d'; g.font = 'bold 13px Georgia'; g.textAlign = 'center'; g.fillText('▼ Valdora', 900, 1040); g.textAlign = 'left';
+  CLUES.forEach((q, i) => { const done = S.clues.includes(i); g.fillStyle = '#0005'; g.beginPath(); g.ellipse(q.x, q.y + 4, 30, 9, 0, 0, 7); g.fill();
+    if (i === 0) { [[-18, 0], [8, 6], [22, -4]].forEach(([dx, dy]) => { g.fillStyle = '#3a4048'; g.fillRect(q.x + dx - 8, q.y + dy - 6, 18, 8); g.fillStyle = '#aab'; g.fillRect(q.x + dx - 8, q.y + dy - 6, 6, 8); }); g.fillStyle = '#5a2a2a'; g.fillRect(q.x - 3, q.y - 30, 3, 28); g.fillStyle = '#8a3a3a'; g.fillRect(q.x, q.y - 30, 16, 10); }
+    else if (i === 1) { g.fillStyle = '#5a4a32'; g.fillRect(q.x - 12, q.y - 22, 24, 24); g.fillStyle = '#3a2a1a'; g.fillRect(q.x - 12, q.y - 14, 24, 3); g.fillStyle = 'rgba(100,255,120,.6)'; g.beginPath(); g.ellipse(q.x + 14, q.y + 4, 22, 8, 0, 0, 7); g.fill(); }
+    else { g.fillStyle = '#7a6a52'; g.beginPath(); g.moveTo(q.x - 34, q.y); g.lineTo(q.x, q.y - 50); g.lineTo(q.x + 34, q.y); g.fill(); g.fillStyle = '#5a4a38'; g.beginPath(); g.moveTo(q.x, q.y - 50); g.lineTo(q.x + 34, q.y); g.lineTo(q.x + 6, q.y); g.fill(); g.fillStyle = '#2a1a0a'; g.fillRect(q.x - 6, q.y - 20, 12, 20); }
+    if (!done) { g.fillStyle = `rgba(255,220,100,${.7 + .3 * Math.sin(T * 5 + i)})`; g.font = 'bold 22px Georgia'; g.textAlign = 'center'; g.fillText('?', q.x, q.y - 62 - Math.abs(Math.sin(T * 3)) * 6); g.textAlign = 'left'; } });
   chests();
-  SHEEP.forEach((s, i) => { g.fillStyle = '#0003'; g.beginPath(); g.ellipse(s.x, s.y + 4, 16, 6, 0, 0, 7); g.fill(); g.fillStyle = S.sheep.includes(i) ? '#cde' : '#f4f4f0'; g.beginPath(); g.ellipse(s.x, s.y - 10, 15, 11, 0, 0, 7); g.fill(); g.fillStyle = '#222'; g.beginPath(); g.arc(s.x + 14, s.y - 12, 6, 0, 7); g.fill(); g.fillRect(s.x - 8, s.y - 2, 3, 8); g.fillRect(s.x + 5, s.y - 2, 3, 8); });
-  GLYPHS.forEach((q, i) => { g.fillStyle = '#0003'; g.fillRect(q.x - 18, q.y - 4, 40, 10); g.fillStyle = '#6a6a74'; g.fillRect(q.x - 14, q.y - 46, 28, 48); g.fillStyle = S.glyph.includes(i) ? '#8fa' : '#4cf'; g.globalAlpha = .6 + .4 * Math.sin(T * 3 + i); g.fillRect(q.x - 6, q.y - 36, 12, 3); g.fillRect(q.x - 3, q.y - 30, 6, 14); g.globalAlpha = 1; });
-  for (let i = 0; i < 90; i++) { const tx = hash(i, 17) * 1800, ty = hash(i, 19) * 1100; if (tx < 130 || (tx > 840 && tx < 960 && ty > 680) || Math.abs(ty - 725) < 40 && tx > 280 && tx < 960 || tx < cam.x - 40 || tx > cam.x + W + 40 || ty < cam.y - 60 || ty > cam.y + H + 60) continue; tree(tx, ty, i + 100); }
+  SHEEP.forEach((s, i) => { g.fillStyle = '#0004'; g.beginPath(); g.ellipse(s.x, s.y + 4, 17, 6, 0, 0, 7); g.fill(); g.fillStyle = S.sheep.includes(i) ? '#c8d4e0' : '#efeadc'; g.beginPath(); g.ellipse(s.x, s.y - 10, 15, 11, 0, 0, 7); g.fill(); g.fillStyle = '#e8e2d0'; g.beginPath(); g.arc(s.x - 6, s.y - 16, 7, 0, 7); g.arc(s.x + 4, s.y - 17, 7, 0, 7); g.fill(); g.fillStyle = '#2a2a2a'; g.beginPath(); g.arc(s.x + 14, s.y - 12, 6, 0, 7); g.fill(); g.fillRect(s.x - 8, s.y - 2, 3, 8); g.fillRect(s.x + 5, s.y - 2, 3, 8); });
+  GLYPHS.forEach((q, i) => { g.fillStyle = '#0004'; g.fillRect(q.x - 18, q.y - 4, 40, 10); g.fillStyle = '#7a7668'; g.fillRect(q.x - 14, q.y - 46, 28, 48); g.fillStyle = '#9a9684'; g.fillRect(q.x - 14, q.y - 46, 9, 48); g.fillStyle = S.glyph.includes(i) ? '#8fa' : '#4cf'; g.globalAlpha = .6 + .4 * Math.sin(T * 3 + i); g.fillRect(q.x - 6, q.y - 36, 12, 3); g.fillRect(q.x - 3, q.y - 30, 6, 14); g.globalAlpha = 1; });
 }
 function drawDungeon() {
-  g.fillStyle = '#10171a'; g.fillRect(0, 0, W, H);
-  for (let ty = 0; ty < 17; ty++) for (let tx = 0; tx < 30; tx++) { const h = hash(tx, ty + (S.scene === 'd2' ? 40 : S.scene === 'boss' ? 80 : 0)); g.fillStyle = h < .5 ? '#1c2a2c' : '#22343a'; g.fillRect(tx * 32 + 1, ty * 32 + 1, 30, 30); }
-  g.strokeStyle = '#2f6a3a'; g.lineWidth = 6; for (let i = 0; i < 8; i++) { g.beginPath(); g.moveTo(i * 130, 0); g.quadraticCurveTo(i * 130 + 30 * Math.sin(T + i), 40, i * 130 + 10, 90 + hash(i, 1) * 60); g.stroke(); }
-  const gl = .35 + .2 * Math.sin(T * 2); g.strokeStyle = `rgba(110,220,255,${gl})`; g.lineWidth = 2; g.beginPath(); g.arc(480, 290, 90 + (S.scene === 'boss' ? 60 : 0), 0, 7); g.stroke(); for (let i = 0; i < 6; i++) { const a = i * 1.047 + T * .2; g.fillStyle = `rgba(110,220,255,${gl})`; g.fillRect(480 + Math.cos(a) * 90 - 4, 290 + Math.sin(a) * 90 - 4, 8, 8); }
-  SCN[S.scene].col.forEach(r => { g.fillStyle = '#3a4a50'; g.fillRect(r[0], r[1], r[2], r[3]); g.fillStyle = '#5a6a70'; g.fillRect(r[0], r[1], r[2], 8); });
-  if (S.doorOpen) { g.fillStyle = `rgba(255,230,150,${.3 + .2 * Math.sin(T * 5)})`; g.fillRect(430, 0, 100, 60); g.fillStyle = '#e8a33d'; g.font = 'bold 13px Georgia'; g.textAlign = 'center'; g.fillText('▲ avançar', 480, 80); g.textAlign = 'left'; } else if (S.scene !== 'boss') { g.fillStyle = '#2a3236'; g.fillRect(430, 0, 100, 40); }
-  g.fillStyle = '#0006'; g.fillRect(0, 0, 14, H); g.fillRect(W - 14, 0, 14, H);
+  blitBG(S.scene === 'boss' ? 'd1' : S.scene);
+  if (S.doorOpen) { g.fillStyle = `rgba(255,230,150,${.3 + .2 * Math.sin(T * 5)})`; g.fillRect(430, 0, 100, 60); g.fillStyle = '#e8a33d'; g.font = 'bold 13px Georgia'; g.textAlign = 'center'; g.fillText('▲ avançar', 480, 82); g.textAlign = 'left'; }
+  if (S.scene === 'd2') for (let i = 0; i < 5; i++) { const gx = [200, 760, 480, 300, 680][i], gy = [200, 200, 330, 450, 450][i], pr = .6 + .4 * Math.sin(T * 2 + i); const gr = g.createRadialGradient(gx, gy, 2, gx, gy, 60); gr.addColorStop(0, `rgba(80,255,190,${.6 * pr})`); gr.addColorStop(1, 'rgba(80,255,190,0)'); g.fillStyle = gr; g.beginPath(); g.ellipse(gx, gy, 62, 34, 0, 0, 7); g.fill(); g.strokeStyle = `rgba(150,255,220,${.7 * pr})`; g.lineWidth = 2; g.beginPath(); g.ellipse(gx, gy, 34, 18, 0, 0, 7); g.stroke(); }
 }
 function drawE(e) {
   const ty = e.boss ? { spr: 'exec', sc: 1.25 } : ET[e.type], al = e.dead ? Math.max(0, 1 - e.dt * 1.1) : 1, m = e.dead ? 'dead' : e.am > 0 ? 'atk' : e.mv ? 'walk' : 'idle', fly = ty.fly ? ty.fly + Math.sin(e.t * 5) * 5 : 0;
@@ -314,33 +346,46 @@ function drawFX() {
   FX.forEach(f => { const p = f.t / f.life; g.globalAlpha = Math.max(0, 1 - p);
     if (f.k === 'ring') { g.strokeStyle = f.col; g.lineWidth = 5; g.beginPath(); g.ellipse(f.x, f.y, f.r * Math.min(1, p * 2.2), f.r * Math.min(1, p * 2.2) * .6, 0, 0, 7); g.stroke(); g.fillStyle = f.col; g.globalAlpha *= .15; g.fill(); }
     else if (f.k === 'sp') { g.fillStyle = f.col; g.fillRect(f.x, f.y, 3, 3); }
+    else if (f.k === 'ghost') { drawSpr(g, S.hero, f.x, f.y, { fx: f.fx, fy: f.fy, m: 'run', ph: 1, sc: .92, a: .4 * (1 - p) }); }
     else if (f.k === 'slash') { g.strokeStyle = f.col; g.lineWidth = 7; g.shadowColor = f.col; g.shadowBlur = 14; g.beginPath(); g.arc(f.x - Math.cos(f.a) * 14, f.y - Math.sin(f.a) * 14, 38, f.a - 1.1 + p * 1.4, f.a + .1 + p * 1.4); g.stroke(); g.shadowBlur = 0; }
     else if (f.k === 'txt') { g.fillStyle = f.col; g.font = 'bold 18px Georgia'; g.textAlign = 'center'; g.strokeStyle = '#000'; g.lineWidth = 3; g.strokeText(f.s, f.x, f.y - p * 32); g.fillText(f.s, f.x, f.y - p * 32); g.textAlign = 'left'; }
     g.globalAlpha = 1; });
-  PR.forEach(p => { g.save(); g.shadowColor = p.col; g.shadowBlur = 16; g.fillStyle = p.col; g.beginPath(); g.arc(p.x, p.y, p.big ? 9 : 6, 0, 7); g.fill(); g.restore(); });
+  PR.forEach(p => { g.save(); g.shadowColor = p.col; g.shadowBlur = 16; g.fillStyle = p.col; if (p.kind === 'arrow') { g.translate(p.x, p.y); g.rotate(Math.atan2(p.vy, p.vx)); g.strokeStyle = '#e8dcc0'; g.lineWidth = 2; g.beginPath(); g.moveTo(-18, 0); g.lineTo(2, 0); g.stroke(); g.beginPath(); g.moveTo(2, -4); g.lineTo(10, 0); g.lineTo(2, 4); g.fill(); g.strokeStyle = p.col; g.beginPath(); g.moveTo(-18, -3); g.lineTo(-14, 0); g.lineTo(-18, 3); g.stroke(); } else if (p.kind === 'orb') { g.fillStyle = '#2a1040'; g.beginPath(); g.arc(p.x, p.y, 9, 0, 7); g.fill(); g.strokeStyle = p.col; g.lineWidth = 2; g.beginPath(); g.arc(p.x, p.y, 9 + Math.sin(T * 20), 0, 7); g.stroke(); } else { g.beginPath(); g.arc(p.x, p.y, p.big ? 9 : 6, 0, 7); g.fill(); } g.restore(); });
 }
 function drawWorld() {
   const sc = SCN[S.scene]; cam.x = Math.max(0, Math.min(sc.w - W, P.x - W / 2)); cam.y = Math.max(0, Math.min(sc.h - H, P.y - H / 2 - 20));
   g.save(); g.translate(-Math.round(cam.x + rnd(-1, 1) * shake * 8), -Math.round(cam.y + rnd(-1, 1) * shake * 8));
   S.scene === 'village' ? drawVillage() : S.scene === 'campos' ? drawCampos() : drawDungeon();
-  const ents = [], hs = .92, lh = k => SPR[k].ch * hs + 10;
-  ents.push({ y: P.y, f: () => { if (P.inv > 0 && P.m !== 'dead' && Math.floor(T * 20) % 2) g.globalAlpha = .55; drawSpr(g, S.hero, P.x, P.y, { fx: P.fx, fy: P.fy, m: P.m, t: P.mt, ph: P.ph, sc: hs, el: CHARS[S.hero].el, flash: P.m === 'hurt' && P.mt < .08 }); g.globalAlpha = 1; label(P.x, P.y - lh(S.hero), S.name, '#e8a33d'); } });
-  Object.values(R).forEach(r => { if (r.sc === S.scene) ents.push({ y: r.y, f: () => { drawSpr(g, r.hero, r.x, r.y, { fx: r.fx, fy: r.fy, m: r.m, t: r.t, ph: r.ph, sc: hs, el: CHARS[r.hero].el }); label(r.x, r.y - lh(r.hero), r.name, '#9ff'); if (r.say) bubble(r.x, r.y - lh(r.hero) - 22, r.say); } }); });
-  if (S.scene === 'village') NPCS.forEach(n => ents.push({ y: n.y, f: () => { const d = len(P.x - n.x, P.y - n.y), s = n.sc || hs; drawSpr(g, n.spr, n.x, n.y, { fx: d < 220 ? (P.x - n.x) / d : 0, fy: d < 220 ? (P.y - n.y) / d : 1, m: 'idle', sc: s }); label(n.x, n.y - SPR[n.spr].ch * s - 10, n.n, '#fff'); if (d < 62) bubble(n.x, n.y - SPR[n.spr].ch * s - 32, 'E', 1); } }));
-  if (S.scene === 'campos') { SHEEP.forEach(s => { if (len(P.x - s.x, P.y - s.y) < 55) ents.push({ y: s.y + 1, f: () => bubble(s.x, s.y - 40, 'E', 1) }); }); GLYPHS.forEach(q => { if (len(P.x - q.x, P.y - q.y) < 60) ents.push({ y: q.y + 1, f: () => bubble(q.x, q.y - 62, 'E', 1) }); }); }
+  const ents = [], hsc = .92, lh = k => SPR[k].ch * hsc + 10;
+  ents.push({ y: P.y, f: () => { if (P.inv > 0 && P.m !== 'dead' && Math.floor(T * 20) % 2) g.globalAlpha = .55; drawHero(g, S.hero, P.x, P.y, { fx: P.fx, fy: P.fy, m: P.m, t: P.mt, ph: P.ph, sc: hsc, c: P.combo, el: CHARS[S.hero].el, flash: P.m === 'hurt' && P.mt < .08 }); g.globalAlpha = 1; label(P.x, P.y - lh(S.hero), S.name, '#e8a33d'); } });
+  Object.values(R).forEach(r => { if (r.sc === S.scene) ents.push({ y: r.y, f: () => { drawHero(g, r.hero, r.x, r.y, { fx: r.fx, fy: r.fy, m: r.m, t: r.t, ph: r.ph, sc: hsc, el: CHARS[r.hero].el }); label(r.x, r.y - lh(r.hero), r.name, '#9ff'); if (r.say) bubble(r.x, r.y - lh(r.hero) - 22, r.say); } }); });
+  if (S.scene === 'village') NPCS.forEach(n => ents.push({ y: n.y, f: () => { const d = len(P.x - n.x, P.y - n.y), s = n.sc || hsc; drawSpr(g, n.spr, n.x, n.y, { fx: d < 220 ? (P.x - n.x) / d : 0, fy: d < 220 ? (P.y - n.y) / d : 1, m: 'idle', sc: s }); label(n.x, n.y - SPR[n.spr].ch * s - 10, n.n, '#fff'); if (d < 62) bubble(n.x, n.y - SPR[n.spr].ch * s - 32, 'E', 1); } }));
+  if (S.scene === 'campos') { SHEEP.forEach(s => { if (len(P.x - s.x, P.y - s.y) < 55) ents.push({ y: s.y + 1, f: () => bubble(s.x, s.y - 40, 'E', 1) }); }); GLYPHS.forEach(q => { if (len(P.x - q.x, P.y - q.y) < 60) ents.push({ y: q.y + 1, f: () => bubble(q.x, q.y - 62, 'E', 1) }); }); CLUES.forEach(q => { if (len(P.x - q.x, P.y - q.y) < 70) ents.push({ y: q.y + 1, f: () => bubble(q.x, q.y - 76, 'E', 1) }); }); }
   E.forEach(e => ents.push({ y: e.y, f: () => drawE(e) })); ents.sort((a, b) => a.y - b.y).forEach(e => e.f()); drawFX(); g.restore();
+  if (S.scene === 'd1' || S.scene === 'd2' || S.scene === 'boss') lightPass(g, S.scene === 'boss' ? 'd1' : S.scene, P.x, P.y, cam.x, cam.y, T); vignette();
   if (P.inv > .45) { g.fillStyle = `rgba(255,0,0,${(P.inv - .45) * .6})`; g.fillRect(0, 0, W, H); } hud();
 }
+function vignette() { const gr = g.createRadialGradient(W / 2, H / 2, H * .35, W / 2, H / 2, H * .95); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(18,8,0,.55)'); g.fillStyle = gr; g.fillRect(0, 0, W, H); if (S.scene === 'village' || S.scene === 'campos') { g.fillStyle = 'rgba(255,200,120,.07)'; g.fillRect(0, 0, W, H); } }
 function label(x, y, t, c) { g.font = '11px Georgia'; g.textAlign = 'center'; g.fillStyle = '#000a'; g.fillText(t, x + 1, y + 1); g.fillStyle = c; g.fillText(t, x, y); g.textAlign = 'left'; }
 function bubble(x, y, t, k) { g.font = '12px Georgia'; const w = Math.min(220, g.measureText(t).width + 14); g.fillStyle = k ? '#e8a33d' : '#fffffff0'; g.fillRect(x - w / 2, y - 12, w, 20); g.fillStyle = '#222'; g.textAlign = 'center'; g.fillText(t.slice(0, 36), x, y + 3); g.textAlign = 'left'; }
 function bar(x, y, w, h, p, c, bg) { g.fillStyle = bg; g.fillRect(x, y, w, h); g.fillStyle = c; g.fillRect(x, y, Math.max(0, w * Math.min(1, p)), h); g.strokeStyle = '#0008'; g.strokeRect(x, y, w, h); }
+function objTarget() {
+  if (cut || dlgOn || !P) return null; const sc = S.scene, near = f => E.filter(e => !e.dead && f(e)).sort((a, b) => len(a.x - P.x, a.y - P.y) - len(b.x - P.x, b.y - P.y))[0];
+  if (sc === 'village') { if (S.quest === 0) { const n = NPCS.find(n => ['auren', 'ferr', 'taver'].includes(n.id) && !S.talked[n.id]); return n ? { x: n.x, y: n.y } : null; } if (S.quest === 3) { if (S.clues.length < 3 || S.lv < BALANCE.dungeonMinLv) return { x: 750, y: 40 }; return { x: 750, y: 850 }; } if (S.quest === 2) { const e = near(() => 1); return e ? { x: e.x, y: e.y } : null; } return null; }
+  if (sc === 'campos') { const ci = CLUES.findIndex((q, i) => !S.clues.includes(i)); if (ci >= 0) return { x: CLUES[ci].x, y: CLUES[ci].y }; if (S.lv < BALANCE.dungeonMinLv) { const e = near(() => 1); if (e) return { x: e.x, y: e.y }; } return { x: 900, y: 1070 }; }
+  if (sc === 'd1' || sc === 'd2') { if (S.doorOpen) return { x: 480, y: 30 }; const e = near(() => 1); return e ? { x: e.x, y: e.y } : null; }
+  return null;
+}
 function hud() {
-  const s = st(), c = CHARS[S.hero]; g.fillStyle = '#000a'; g.fillRect(8, 8, 290, 66); const im = ART['p_' + S.hero]; if (im.complete) g.drawImage(im, 12, 12, 52, 58); g.strokeStyle = c.el; g.lineWidth = 2; g.strokeRect(12, 12, 52, 58);
+  const s = st(), c = CHARS[S.hero]; g.fillStyle = '#000a'; g.fillRect(8, 8, 290, 78); const im = ART['p_' + S.hero]; if (im.complete) g.drawImage(im, 12, 12, 52, 58); g.strokeStyle = c.el; g.lineWidth = 2; g.strokeRect(12, 12, 52, 58);
   g.fillStyle = '#e8a33d'; g.font = 'bold 13px Georgia'; g.fillText(c.n + '  Nv ' + S.lv, 72, 24);
   bar(72, 30, 216, 10, P.hp / s.mhp, '#d03a3a', '#400'); bar(72, 43, 216, 8, P.mp / s.mmp, '#3a8ae0', '#124'); bar(72, 54, 216, 5, (S.xp - XPT[S.lv - 1]) / ((XPT[S.lv] || S.xp + 1) - XPT[S.lv - 1]), '#e8c96a', '#432');
-  g.fillStyle = '#fff'; g.font = '11px Georgia'; g.fillText(Math.ceil(P.hp) + '/' + s.mhp, 76, 39); g.fillText('🪙 ' + S.gold, 72, 70);
+  g.fillStyle = '#fff'; g.font = '11px Georgia'; g.fillText(Math.ceil(P.hp) + '/' + s.mhp, 76, 39); g.fillText('🪙 ' + S.gold, 236, 24); for (let i = 0; i < 10; i++) { g.fillStyle = i < (S.chg || 0) ? (S.chg >= 10 ? `hsl(${40 + Math.sin(T * 8) * 20},100%,60%)` : '#ffb84a') : '#3a2a1a'; g.fillRect(72 + i * 22, 66, 19, 7); } g.fillStyle = S.chg >= 10 ? '#ffe9a0' : '#999'; g.font = 'bold 10px Georgia'; g.fillText(S.chg >= 10 ? 'R — ATAQUE CARREGADO PRONTO' : 'Carga: ' + (S.chg || 0) + '/10', 72, 83); g.font = '11px Georgia';
   if (objective) { g.font = '13px Georgia'; const w = g.measureText(objective).width + 20; g.fillStyle = '#000a'; g.fillRect(W / 2 - w / 2 + 70, 8, w, 22); g.fillStyle = '#e8d8a0'; g.textAlign = 'center'; g.fillText('◆ ' + objective, W / 2 + 70, 24); g.textAlign = 'left'; }
   if (boss) { g.fillStyle = '#000b'; g.fillRect(W / 2 - 230, 40, 460, 30); g.fillStyle = '#fff'; g.font = 'bold 13px Georgia'; g.textAlign = 'center'; g.fillText('O CARRASCO — Ordem do Domínio' + (boss.p2 ? ' (Fúria)' : ''), W / 2, 54); g.textAlign = 'left'; bar(W / 2 - 220, 58, 440, 8, boss.hp / boss.mhp, boss.p2 ? '#ff7a30' : '#c04040', '#300'); }
+  const tg = objTarget(); if (tg) { const sx = tg.x - cam.x, sy = tg.y - cam.y, bob = Math.sin(T * 5) * 4;
+    if (sx > 30 && sx < W - 30 && sy > 70 && sy < H - 30) { g.fillStyle = '#ffd86a'; g.strokeStyle = '#000'; g.lineWidth = 2; g.beginPath(); g.moveTo(sx - 10, sy - 70 + bob); g.lineTo(sx + 10, sy - 70 + bob); g.lineTo(sx, sy - 52 + bob); g.closePath(); g.fill(); g.stroke(); }
+    else { const cx = W / 2, cy = H / 2, a = Math.atan2(sy - cy, sx - cx), ex = Math.max(40, Math.min(W - 40, cx + Math.cos(a) * 380)), ey = Math.max(90, Math.min(H - 40, cy + Math.sin(a) * 220)); g.save(); g.translate(ex, ey); g.rotate(a); g.fillStyle = '#ffd86a'; g.strokeStyle = '#000'; g.lineWidth = 2; g.beginPath(); g.moveTo(16, 0); g.lineTo(-10, -11); g.lineTo(-4, 0); g.lineTo(-10, 11); g.closePath(); g.fill(); g.stroke(); g.restore(); g.fillStyle = '#ffe9a0'; g.font = 'bold 11px Georgia'; g.textAlign = 'center'; g.fillText(Math.round(len(tg.x - P.x, tg.y - P.y) / 10) + ' m', ex, ey + 26); g.textAlign = 'left'; } }
   const cs = $('#bS'); if (cs) cs.textContent = !S.skills ? '🔒' : P.skCd > 0 ? Math.ceil(P.skCd) : '✦';
   if (P.dead) { g.fillStyle = '#000a'; g.fillRect(0, 0, W, H); g.fillStyle = '#fff'; g.font = 'bold 30px Georgia'; g.textAlign = 'center'; g.fillText('A luz do selo os traz de volta...', W / 2, H / 2); g.textAlign = 'left'; }
 }
@@ -360,14 +405,15 @@ function togglePause() {
 addEventListener('keydown', e => {
   const k = e.key.toLowerCase(); if (document.activeElement === $('#msg')) { if (k === 'enter') { const v = $('#msg').value.trim(); $('#msg').value = ''; $('#msg').blur(); if (v) { log(v, S.name); sendN('chat', { t: v }); } } e.stopPropagation(); return; }
   if (S.scene === 'title' && !cut) return; if (k === 'escape' || k === 'p') { togglePause(); return; } if (paused) return;
+  if (TB) { tbKey(k); return; }
   if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(k)) e.preventDefault();
-  if (k === 'enter') { $('#msg').focus(); return; } if ((k === ' ' || k === 'e') && dlgNext) { dlgNext(); return; } if (k === 'e') interact(); keys[k] = 1;
+  if (k === 'enter') { $('#msg').focus(); return; } if ((k === ' ' || k === 'e') && dlgNext) { dlgNext(); return; } if (k === 'e') interact(); if (k === 'r') charged(); if (k === 'shift' || k === 'l') dodge(); keys[k] = 1;
 });
 addEventListener('keyup', e => keys[e.key.toLowerCase()] = 0);
 (() => { const j = $('#joy'), k = j.firstChild; let on = 0; const mv = e => { const r = j.getBoundingClientRect(); let x = (e.clientX - r.left - r.width / 2) / (r.width / 2), y = (e.clientY - r.top - r.height / 2) / (r.height / 2); const l = Math.hypot(x, y); if (l > 1) { x /= l; y /= l; } J.x = Math.abs(x) < .12 ? 0 : x; J.y = Math.abs(y) < .12 ? 0 : y; k.style.transform = `translate(${x * 60}%,${y * 60}%)`; }; const end = () => { on = 0; J.x = J.y = 0; k.style.transform = ''; };
   j.addEventListener('pointerdown', e => { on = 1; j.setPointerCapture(e.pointerId); mv(e); }); j.addEventListener('pointermove', e => on && mv(e)); j.addEventListener('pointerup', end); j.addEventListener('pointercancel', end);
-  [['#bA', 'a'], ['#bS', 's']].forEach(([id, h]) => { const b = $(id); b.addEventListener('pointerdown', e => { e.preventDefault(); held[h] = 1; }); ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => b.addEventListener(ev, () => held[h] = 0)); });
-  $('#bE').addEventListener('pointerdown', e => { e.preventDefault(); dlgNext ? dlgNext() : interact(); }); })();
+  [['#bA', 'a'], ['#bS', 's']].forEach(([id, h]) => { const b = $(id); b.addEventListener('pointerdown', e => { e.preventDefault(); if (TB) { tbBtn(h); return; } held[h] = 1; }); ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => b.addEventListener(ev, () => held[h] = 0)); });
+  $('#bE').addEventListener('pointerdown', e => { e.preventDefault(); dlgNext ? dlgNext() : interact(); }); $('#bR').addEventListener('pointerdown', e => { e.preventDefault(); TB ? tbKey('r') : charged(); }); $('#bD').addEventListener('pointerdown', e => { e.preventDefault(); dodge(); }); })();
 $('#mute').onclick = () => { $('#mute').textContent = A.toggle() ? '🔇' : '🔊'; };
 $('#menu').onclick = togglePause;
 $('#share').onclick = () => { const u = location.origin + '/?sala=' + S.room; navigator.clipboard?.writeText(u).catch(() => { }); log('Link copiado: ' + u, 'Sala'); };
@@ -377,13 +423,13 @@ let chosen = false; const pvc = $('#pvs').getContext('2d');
   ['kael', 'lyra', 'eld', 'ser', 'dar', 'tho'].forEach(k => { const d = document.createElement('div'); d.className = 'card'; d.innerHTML = `<img src="assets/p_${k}.jpg"><b>${CHARS[k].n.split(' ')[0]}</b><br>${CHARS[k].fac}`; $('#heroes').appendChild(d);
     d.onclick = () => { S.hero = k; chosen = true; document.querySelectorAll('.card').forEach(x => x.classList.remove('sel')); d.classList.add('sel'); $('#go').disabled = false; $('#pvb').src = 'assets/b_' + k + '.jpg'; $('#pv').style.display = 'flex'; $('#info').textContent = CHARS[k].n + ' — ' + CHARS[k].role + '. Habilidade: ' + CHARS[k].sk + '.'; A.init(); A.sfx('ui'); A.theme('calm'); }; });
   $('#go').onclick = () => { A.init(); S.name = $('#nm').value.trim().slice(0, 14) || 'Viajante'; S.room = $('#rm').value.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 20) || 'valdora'; $('#title').style.display = 'none'; started = true; newPlayer(); S.scene = 'village'; if (touch) { $('#joy').style.display = 'flex'; $('#btns').style.display = 'flex'; } connect();
-    playCut('prologue', () => { setObj('Converse com os moradores (0/3): Auren, Ferreiro, Taverneiro'); A.theme('calm'); log('WASD/joystick: mover · J/⚔: atacar · E: interagir · Esc/☰: menu · Enter: chat', 'Dica'); }); };
+    playCut('prologue', () => playCut('card1', () => { CUTS.intro = { theme: 'calm', slides: INTRO[S.hero] }; playCut('intro', () => { setObj('Converse com os moradores (0/3): Auren, Ferreiro, Taverneiro'); A.theme('calm'); log('WASD/joystick: mover · J/⚔: atacar (3 golpes em sequência) · R: ataque carregado · Shift/➤: esquiva · E: interagir · Esc/☰: menu', 'Dica'); }); })); };
 })();
 // ---------- LOOP ----------
 let last = 0;
 function loop(ts) {
   const dt = Math.min(.05, (ts - last) / 1000); last = ts; update(dt);
-  if (cut) drawCut(); else if (started && P) drawWorld(); else { g.fillStyle = '#0b0711'; g.fillRect(0, 0, W, H); }
+  if (cut) drawCut(); else if (TB) drawTB(); else if (started && P) drawWorld(); else { g.fillStyle = '#0b0711'; g.fillRect(0, 0, W, H); }
   if (!started && chosen) { pvc.clearRect(0, 0, 130, 170); drawSpr(pvc, S.hero, 65, 160, { di: Math.floor(T * 1.6) % 8, fx: 0, fy: 1, m: 'idle', sc: 1.35 }); }
   requestAnimationFrame(loop);
 }

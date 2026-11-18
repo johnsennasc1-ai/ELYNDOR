@@ -25,4 +25,5 @@ function drawSpr(g,k,x,y,s){
   if(split){g.drawImage(src,off,0,sp.cw,th,-sp.cw/2,-sp.ch,sp.cw,th);g.drawImage(src,off,th,sp.cw,sp.ch-th,-sp.cw/2+split,-sp.ch+th,sp.cw,sp.ch-th);}
   else g.drawImage(src,off,0,sp.cw,sp.ch,-sp.cw/2,-sp.ch,sp.cw,sp.ch);
   g.restore();
+  return {dx,dy:dy-(s.fly||0)};
 }

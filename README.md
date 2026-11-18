@@ -18,6 +18,13 @@ Sem dependências: só precisa do Node 18+.
 
 Observação: no plano gratuito do Render o serviço "dorme" após inatividade; o primeiro acesso pode demorar ~1 minuto.
 
+## Novidades desta versão
+- Armas desenhadas em cada herói (espada, cajado, arco, varinha, maça, martelo) com sons próprios, combo de 3 golpes, esquiva (Shift/➤) e ataque carregado no R a cada 10 ataques normais.
+- Cenários pintados em tons antigos, com iluminação de tochas nas masmorras.
+- Luta contra o Carrasco por turnos, com câmera inclinada: J atacar, K/T habilidade, R carregado, **R, T, R** (ou ⚔ + ✦ juntos no celular) especial em grupo, F defender.
+- Capítulo mais longo: abertura por herói, cartões de capítulo, 3 pistas nos Campos, reencontro dos heróis, seta dourada de objetivo.
+- Cutscenes com camadas, névoa, luz, grão de filme e arte pintada dos heróis.
+
 ## Controles
 - Mover: WASD / setas / joystick · Atacar: J ou Espaço / ⚔ · Habilidade elemental: K / ✦ (libera após o despertar) · Interagir: E · Chat: Enter
 
