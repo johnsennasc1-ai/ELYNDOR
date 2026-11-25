@@ -1,48 +1,27 @@
-# ELYNDOR — As Cinzas de Valdora (Arco I)
+# ELYNDOR — As Correntes do Abismo (Arco I)
 
-RPG de ação em tempo real, jogável no navegador (celular e computador), com salas online e chat de texto.
-Sem dependências: só precisa do Node 18+.
+RPG de ação em tempo real com chefes por turnos, salas online e chat. Sem dependências: só precisa do Node 18+.
 
-## Rodar no seu Mac (teste)
-1. Instale o Node (https://nodejs.org) se ainda não tiver.
-2. No Terminal: `cd elyndor-online` e `node server.js`
-3. Abra http://localhost:3000 — para testar online, abra em duas abas com a mesma sala.
+## Rodar no Mac (teste)
+`cd elyndor-online && node server.js` → abra http://localhost:3000 (duas abas com a mesma sala testam o online).
 
 ## Colocar no ar (GitHub + Render)
-1. Crie um repositório novo no GitHub e envie **o conteúdo** desta pasta (server.js, package.json, render.yaml, public/).
-2. No Render: **New → Web Service** → conecte o repositório.
-   - Runtime: Node · Build Command: (deixe vazio ou `echo ok`) · Start Command: `node server.js`
-   - (O arquivo render.yaml já traz essas configurações.)
-3. Quando o deploy terminar, abra o link `https://SEU-APP.onrender.com`.
-4. Na tela inicial, escolha nome e **sala**. Botão **Convidar** copia `https://SEU-APP.onrender.com/?sala=NOME` para os amigos entrarem sem conta e sem baixar nada.
+1. Suba o **conteúdo** desta pasta para um repositório no GitHub (server.js, package.json, render.yaml, manifest... e a pasta `public`).
+2. Render: **New → Web Service** → conecte o repositório → Start Command `node server.js` (o render.yaml já traz isso).
+3. Link dos amigos: botão 🔗 do menu (☰) copia `https://SEU-APP.onrender.com/?sala=NOME`.
+> Para atualizar: troque os arquivos no GitHub; o Render publica sozinho.
 
-Observação: no plano gratuito do Render o serviço "dorme" após inatividade; o primeiro acesso pode demorar ~1 minuto.
+## Como jogar
+- **Mover**: WASD/setas/joystick · **Atacar**: J/Espaço/⚔ (combo de 3 golpes) · **Habilidade** (nível 3): K/✦ · **Carregado**: R (a cada 10 ataques) · **Esquiva**: Shift/➤ · **Interagir**: E · **Menu**: Esc/☰ (tela cheia, som, chat, diário, dificuldade).
+- **Chefes (turnos)**: cada chefe tem 2 comparsas bot. J atacar, K/T habilidade, R carregado, **R,T,R** (ou ⚔+✦ juntos no celular) especial em grupo, F defender, Q trocar alvo.
+- **Online**: todos na mesma sala entram juntos na luta contra o chefe e agem no próprio turno. Bots completam o grupo.
+- **Dificuldade**: Fácil / Médio / Difícil (tela inicial e menu de pausa).
+- **Tela cheia no iPhone**: Compartilhar → Adicionar à Tela de Início.
 
-## Novidades desta versão
-- Armas desenhadas em cada herói (espada, cajado, arco, varinha, maça, martelo) com sons próprios, combo de 3 golpes, esquiva (Shift/➤) e ataque carregado no R a cada 10 ataques normais.
-- Cenários pintados em tons antigos, com iluminação de tochas nas masmorras.
-- Luta contra o Carrasco por turnos, com câmera inclinada: J atacar, K/T habilidade, R carregado, **R, T, R** (ou ⚔ + ✦ juntos no celular) especial em grupo, F defender.
-- Capítulo mais longo: abertura por herói, cartões de capítulo, 3 pistas nos Campos, reencontro dos heróis, seta dourada de objetivo.
-- Cutscenes com camadas, névoa, luz, grão de filme e arte pintada dos heróis.
-
-## Controles
-- Mover: WASD / setas / joystick · Atacar: J ou Espaço / ⚔ · Habilidade elemental: K / ✦ (libera após o despertar) · Interagir: E · Chat: Enter
-
-## Arte e animação
-Os sprites vêm das suas artes 360° (pasta `public/assets/`): cada personagem e inimigo usa as 8 direções (frente, diagonais, lados, costas), animadas por código (andar, correr, golpe, magia, dano, queda). A arte pintada da folha de personagens aparece no menu inicial, no status/pausa (Esc ou ☰) e nos diálogos. O Sombroso aparece nas cutscenes.
-Para trocar um sprite, substitua o PNG correspondente (8 quadros lado a lado) e ajuste `MAN` em `public/sprites.js`.
-
-## Personagens (todos animados e jogáveis)
-Kael (espada de fogo), Lyra (cura de água), Eldarion (arco de vento), Seraphine (sombra), Darius (escudo de terra), Thorin (martelo de metal).
-Cada um tem andar, corrida, golpe, magia, dano e queda.
-
-## Arco I expandido
-Vila de Valdora → Noite dos Corrompidos → Campos de Valdora (4 monstros que renascem, para ganhar XP; 4 missões secundárias) → Santuário das Raízes (nível 4) → O Carrasco → escolha do cristal ou fragmento → epílogo com Auren e o Sombroso.
-
-## Como o online funciona
-Servidor de salas via SSE (até 8 jogadores por sala): posições, animações, ataques e chat são sincronizados.
-Os inimigos e o progresso da história são simulados em cada jogador (cooperativo "lado a lado"). Uma versão com inimigos compartilhados é o próximo passo.
+## Estrutura do Arco I
+Valdora (cap. 1–2) → Campos (XP e missões) → Floresta de Eryndor → Ruínas de Vhal'Tor → Prisão de Nhal'Zareth (5 andares) → Último andar (Carrasco, 4 fases) → Fuga → Epílogo.
+9 chefes por turnos: Sinoqueiro, Matriarca das Raízes, Cavaleiro Sem Brasão, Aberração Cirúrgica, Vigia das Mil Vozes, Ferreiro das Correntes, Guardião do Selo, Guardas de Elite e O Carrasco.
+Lyra é sequestrada no capítulo 2 e só volta no final (não selecionável).
 
 ## Ajustes rápidos
-`public/game.js` → objeto `BALANCE` (vida do chefe, custo e recarga das habilidades, dificuldade).
-`public/story.js` → textos das cutscenes. `public/audio.js` → trilha e efeitos.
+`public/game.js` → `BALANCE` e `DIFF` (vida/dano dos inimigos, XP). `public/battle.js` → `BOSSES` (vida, ataques e fases de cada chefe). `public/arc.js` → roteiro e passos da campanha.

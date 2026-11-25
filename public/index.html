@@ -1,25 +1,25 @@
 <!DOCTYPE html>
-<html lang="pt-BR"><head><meta charset="utf-8"><title>Elyndor — As Cinzas de Valdora</title>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>Elyndor — As Correntes do Abismo</title>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#120d1a"><link rel="stylesheet" href="style.css"></head><body>
+<meta name="theme-color" content="#120d1a"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json"><link rel="stylesheet" href="style.css"></head><body>
 <div id="stage">
   <canvas id="c" width="960" height="540"></canvas>
-  <div id="top"><button id="menu" title="Menu">☰</button><button id="mute" title="Som">🔊</button><button id="share" title="Convidar">🔗 Convidar</button><span id="net">offline</span></div>
+  <div id="top"><button id="menu" title="Menu">☰</button><div id="bar"><button id="fs" title="Tela cheia">⛶</button><button id="mute" title="Som">🔊</button><button id="chatb" title="Chat">💬</button><button id="diary" title="Diário e status">📜</button><button id="share" title="Convidar">🔗</button></div><span id="net">●</span></div>
+  <div id="log"></div><input id="msg" maxlength="140" placeholder="Mensagem para a sala (Enter envia)">
   <div id="dlg"></div>
   <div id="joy"><i></i></div>
-  <div id="btns"><button id="bD">➤</button><button id="bR">R</button><button id="bS">✦</button><button id="bA">⚔</button><button id="bE">E</button></div>
-  <div id="chat"><div id="log"></div><input id="msg" maxlength="140" placeholder="Enter = conversar na sala"></div>
+  <div id="btns"><button id="bD">➤</button><button id="bR">R</button><button id="bS">✦</button><button id="bA">⚔</button></div><button id="bE">E</button>
+  <div id="pause"></div><div id="tbm"></div>
   <div id="title">
-    <h1>ELYNDOR</h1><h2>AS CINZAS DE VALDORA</h2>
+    <h1>ELYNDOR</h1><h2>AS CORRENTES DO ABISMO · ARCO I</h2>
     <div id="mid"><div id="pv"><img id="pvb" alt=""><canvas id="pvs" width="130" height="170"></canvas></div><div id="heroes"></div></div>
     <div id="info"></div>
-    <div class="row"><label>Seu nome <input id="nm" maxlength="14" value=""></label><label>Sala <input id="rm" maxlength="20" value="valdora"></label></div>
+    <div id="dif"><button data-d="easy">Fácil</button><button data-d="normal" class="sel">Médio</button><button data-d="hard">Difícil</button></div>
+    <div class="row"><label>Nome <input id="nm" maxlength="14"></label><label>Sala <input id="rm" maxlength="20" value="valdora"></label></div>
     <button id="go" class="big" disabled>Iniciar jornada</button>
-    <p class="hint">WASD/setas: mover · J/Espaço: atacar · K: habilidade · E: interagir · Enter: chat<br>No celular: joystick e botões na tela.</p>
   </div>
-  <div id="pause"></div>
-  <div id="tbm"></div>
   <div id="end"></div>
 </div>
-<script src="chars.js"></script><script src="sprites.js"></script><script src="weapons.js"></script><script src="scenes.js"></script><script src="cinema.js"></script><script src="audio.js"></script><script src="story.js"></script><script src="game.js"></script><script src="battle.js"></script>
+<script src="chars.js"></script><script src="sprites.js"></script><script src="weapons.js"></script><script src="scenes.js"></script><script src="cinema.js"></script><script src="audio.js"></script><script src="story.js"></script><script src="arc.js"></script><script src="game.js"></script><script src="battle.js"></script>
 </body></html>

@@ -33,7 +33,7 @@ http.createServer((req, res) => {
         if (!p) { res.writeHead(404); res.end(); return; }
         if (m.type === 'p' && m.data) { p.x = +m.data.x || 0; p.y = +m.data.y || 0; }
         if (m.type === 'chat') m.data = { t: String(m.data?.t || '').slice(0, 140) };
-        if (['p', 'chat', 'fx'].includes(m.type)) bcast(room, id, 'msg', { id, name: p.name, type: m.type, data: m.data });
+        if (['p', 'chat', 'fx', 'tb'].includes(m.type)) bcast(room, id, 'msg', { id, name: p.name, type: m.type, data: m.data });
         res.writeHead(204); res.end();
       } catch (e) { res.writeHead(400); res.end(); }
     });
